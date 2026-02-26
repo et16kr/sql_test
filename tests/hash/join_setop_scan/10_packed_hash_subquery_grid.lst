@@ -1,0 +1,96 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify packed-row hash subquery/grid fetch path correctness.
+iSQL> -- Checks: HASH_SJ subquery membership and output cardinality are correct.
+iSQL> -- Disk hash temp packed-row coverage H10: hash subquery path (temp RID/grid fetch pattern)
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DHASH_COV10_A
+(
+    ID       INTEGER,
+    K1       VARCHAR(64),
+    PAD1     VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> CREATE TABLE DHASH_COV10_B
+(
+    ID       INTEGER,
+    K1       VARCHAR(64),
+    PAD1     VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DHASH_COV10_A
+SELECT LEVEL,
+       'K' || LPAD(TO_CHAR(LEVEL), 4, '0'),
+       RPAD('A' || TO_CHAR(LEVEL), 3200, 'A')
+  FROM DUAL
+CONNECT BY LEVEL <= 1000;
+1000 rows inserted.
+iSQL> INSERT INTO DHASH_COV10_B
+SELECT LEVEL,
+       'K' || LPAD(TO_CHAR(LEVEL + 300), 4, '0'),
+       RPAD('B' || TO_CHAR(LEVEL), 3200, 'B')
+  FROM DUAL
+CONNECT BY LEVEL <= 600;
+600 rows inserted.
+iSQL> ALTER SESSION SET EXPLAIN PLAN = ONLY;
+Alter success.
+iSQL> SELECT /*+ TEMP_TBS_DISK HASH_SJ */
+       A.ID,
+       A.K1
+  FROM DHASH_COV10_A A
+ WHERE A.K1 IN (
+       SELECT /*+ HASH_SJ */ B.K1
+         FROM DHASH_COV10_B B
+       )
+ ORDER BY A.K1, A.ID
+ LIMIT 20;
+ID          K1                                                                
+---------------------------------------------------------------------------------
+No rows selected.
+------------------------------------------------------------
+PROJECT ( COLUMN_COUNT: 2, TUPLE_SIZE: 70, COST: 37582.93 )
+ LIMIT-SORT ( ITEM_SIZE: ??, ITEM_COUNT: ??, STORE_COUNT: ??, ACCESS: ??, COST: 37582.93 )
+  SEMI-JOIN ( METHOD: HASH, COST: 37582.90 )
+   SCAN ( TABLE: SYS.DHASH_COV10_A A, FULL SCAN, ACCESS: ??, COST: 118.73 )
+   HASH ( ITEM_SIZE: ??, ITEM_COUNT: ??, BUCKET_COUNT: 5120, ACCESS: ??, COST: 37582.90 )
+    SCAN ( TABLE: SYS.DHASH_COV10_B $$1_$VIEW1_$B, FULL SCAN, ACCESS: ??, COST: 118.73 )
+------------------------------------------------------------
+
+iSQL> ALTER SESSION SET EXPLAIN PLAN = OFF;
+Alter success.
+iSQL> SELECT /*+ TEMP_TBS_DISK HASH_SJ */
+       COUNT(*) AS MATCH_CNT
+  FROM DHASH_COV10_A A
+ WHERE A.K1 IN (
+       SELECT /*+ HASH_SJ */ B.K1
+         FROM DHASH_COV10_B B
+       );
+MATCH_CNT            
+-----------------------
+600                  
+1 row selected.
+iSQL> SELECT CASE WHEN COUNT(*) = 600 THEN 1 ELSE 0 END AS PASS_HASH_SJ
+  FROM (
+        SELECT /*+ TEMP_TBS_DISK HASH_SJ */
+               A.ID
+          FROM DHASH_COV10_A A
+         WHERE A.K1 IN (
+               SELECT /*+ HASH_SJ */ B.K1
+                 FROM DHASH_COV10_B B
+               )
+       ) X;
+PASS_HASH_SJ 
+---------------
+1           
+1 row selected.
+iSQL> DROP TABLE DHASH_COV10_A;
+Drop success.
+iSQL> DROP TABLE DHASH_COV10_B;
+Drop success.

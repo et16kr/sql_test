@@ -1,0 +1,4 @@
+04_packed_hash_join_range.sql
+05_packed_full_outer_hitnohit.sql
+06_packed_intersect_nonhit.sql
+10_packed_hash_subquery_grid.sql

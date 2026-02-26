@@ -1,0 +1,64 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify NO_MERGE view materialization path correctness.
+iSQL> -- Checks: Materialized view row count and filtered count are correct.
+iSQL> -- Disk sort temp coverage 14: NO_MERGE view materialization + full scan cursor
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DST_COV14_BASE
+(
+    ID       INTEGER,
+    GRP_ID   INTEGER,
+    PAD1     VARCHAR(3200),
+    PAD2     VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DST_COV14_BASE
+SELECT LEVEL,
+       MOD(LEVEL, 61),
+       RPAD('V' || TO_CHAR(LEVEL), 3200, 'V'),
+       RPAD('W' || TO_CHAR(MOD(LEVEL, 700)), 3200, 'W')
+  FROM DUAL
+CONNECT BY LEVEL <= 2100;
+2100 rows inserted.
+iSQL> ALTER SESSION SET EXPLAIN PLAN = ONLY;
+Alter success.
+iSQL> SELECT /*+ TEMP_TBS_DISK NO_MERGE(V) */ COUNT(*)
+  FROM (
+        SELECT ID, GRP_ID, PAD1
+          FROM DST_COV14_BASE
+         ORDER BY GRP_ID, ID
+       ) V
+ WHERE V.GRP_ID BETWEEN 5 AND 12;
+COUNT(*)             
+-----------------------
+No rows selected.
+------------------------------------------------------------
+PROJECT ( COLUMN_COUNT: 1, TUPLE_SIZE: 8, COST: 137.76 )
+ GROUP-AGGREGATION ( ITEM_SIZE: ??, GROUP_COUNT: ??, BUCKET_COUNT: 1, ACCESS: ??, COST: 137.76 )
+  VIEW ( ACCESS: ??, COST: 137.42 )
+   PROJECT ( COLUMN_COUNT: 3, TUPLE_SIZE: 3210, COST: 124.45 )
+    SCAN ( TABLE: SYS.DST_COV14_BASE, FULL SCAN, ACCESS: ??, COST: 124.01 )
+------------------------------------------------------------
+
+iSQL> ALTER SESSION SET EXPLAIN PLAN = OFF;
+Alter success.
+iSQL> SELECT /*+ TEMP_TBS_DISK NO_MERGE(V) */ COUNT(*) AS FILTER_CNT
+  FROM (
+        SELECT ID, GRP_ID, PAD1
+          FROM DST_COV14_BASE
+         ORDER BY GRP_ID, ID
+       ) V
+ WHERE V.GRP_ID BETWEEN 5 AND 12;
+FILTER_CNT           
+-----------------------
+280                  
+1 row selected.
+iSQL> DROP TABLE DST_COV14_BASE;
+Drop success.

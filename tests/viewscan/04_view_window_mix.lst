@@ -1,0 +1,122 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify combined view scan and window-function path correctness.
+iSQL> -- Checks: View expansion and window output are both correct.
+iSQL> -- Disk sort temp coverage VS04: NO_MERGE view + windowing mix
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DST_COV_VS04_BASE
+(
+    ID       INTEGER,
+    GRP_ID   INTEGER,
+    PAD1     VARCHAR(3200),
+    PAD2     VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DST_COV_VS04_BASE
+SELECT LEVEL,
+       MOD(LEVEL, 37),
+       RPAD('X' || TO_CHAR(LEVEL), 3200, 'X'),
+       RPAD('Y' || TO_CHAR(MOD(LEVEL, 120)), 3200, 'Y')
+  FROM DUAL
+CONNECT BY LEVEL <= 1700;
+1700 rows inserted.
+iSQL> SELECT ID, GRP_ID, RN
+  FROM (
+        SELECT /*+ TEMP_TBS_DISK NO_MERGE(V) */
+               V.ID,
+               V.GRP_ID,
+               ROW_NUMBER() OVER (PARTITION BY V.GRP_ID ORDER BY V.ID DESC) AS RN
+          FROM (
+                SELECT ID, GRP_ID, PAD1
+                  FROM DST_COV_VS04_BASE
+                 ORDER BY GRP_ID, ID DESC
+               ) V
+       ) X
+ WHERE RN <= 2
+ ORDER BY GRP_ID, RN, ID;
+ID          GRP_ID      RN                   
+-------------------------------------------------
+1665        0           1                    
+1628        0           2                    
+1666        1           1                    
+1629        1           2                    
+1667        2           1                    
+1630        2           2                    
+1668        3           1                    
+1631        3           2                    
+1669        4           1                    
+1632        4           2                    
+1670        5           1                    
+1633        5           2                    
+1671        6           1                    
+1634        6           2                    
+1672        7           1                    
+1635        7           2                    
+1673        8           1                    
+1636        8           2                    
+1674        9           1                    
+1637        9           2                    
+1675        10          1                    
+1638        10          2                    
+1676        11          1                    
+1639        11          2                    
+1677        12          1                    
+1640        12          2                    
+1678        13          1                    
+1641        13          2                    
+1679        14          1                    
+1642        14          2                    
+1680        15          1                    
+1643        15          2                    
+1681        16          1                    
+1644        16          2                    
+1682        17          1                    
+1645        17          2                    
+1683        18          1                    
+1646        18          2                    
+1684        19          1                    
+1647        19          2                    
+1685        20          1                    
+1648        20          2                    
+1686        21          1                    
+1649        21          2                    
+1687        22          1                    
+1650        22          2                    
+1688        23          1                    
+1651        23          2                    
+1689        24          1                    
+1652        24          2                    
+1690        25          1                    
+1653        25          2                    
+1691        26          1                    
+1654        26          2                    
+1692        27          1                    
+1655        27          2                    
+1693        28          1                    
+1656        28          2                    
+1694        29          1                    
+1657        29          2                    
+1695        30          1                    
+1658        30          2                    
+1696        31          1                    
+1659        31          2                    
+1697        32          1                    
+1660        32          2                    
+1698        33          1                    
+1661        33          2                    
+1699        34          1                    
+1662        34          2                    
+1700        35          1                    
+1663        35          2                    
+1664        36          1                    
+1627        36          2                    
+74 rows selected.
+iSQL> DROP TABLE DST_COV_VS04_BASE;
+Drop success.

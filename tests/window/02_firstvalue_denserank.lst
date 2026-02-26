@@ -1,0 +1,45 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify FIRST_VALUE and DENSE_RANK window semantics.
+iSQL> -- Checks: Window frame/ranking values match expected results.
+iSQL> -- Disk sort temp coverage 08: window FIRST_VALUE + DENSE_RANK with packed rows
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DST_COV08
+(
+    ID       INTEGER,
+    GRP_ID   INTEGER,
+    V1       VARCHAR(3200),
+    V2       VARCHAR(3200),
+    V3       VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DST_COV08
+SELECT LEVEL,
+       MOD(LEVEL, 23),
+       RPAD('L' || TO_CHAR(LEVEL), 3200, 'L'),
+       RPAD('M' || TO_CHAR(MOD(LEVEL, 210)), 3200, 'M'),
+       RPAD('N' || TO_CHAR(MOD(LEVEL, 70)), 3200, 'N')
+  FROM DUAL
+CONNECT BY LEVEL <= 1700;
+1700 rows inserted.
+iSQL> SELECT ID, GRP_ID, DRANK
+  FROM (
+        SELECT /*+ TEMP_TBS_DISK */
+               ID,
+               GRP_ID,
+               FIRST_VALUE(V1) OVER (PARTITION BY GRP_ID ORDER BY V2 DESC, ID) AS FV,
+               DENSE_RANK() OVER (PARTITION BY GRP_ID ORDER BY V2 DESC, ID) AS DRANK
+          FROM DST_COV08
+       ) W
+ WHERE DRANK <= 2
+ ORDER BY GRP_ID, DRANK, ID;
+[ERR-0109E : Internal server error.]
+iSQL> DROP TABLE DST_COV08;
+Drop success.

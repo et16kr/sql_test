@@ -1,0 +1,210 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify ORDER BY with NULL values keeps expected null ordering semantics.
+iSQL> -- Checks: NULL placement and sorted sequence are correct.
+iSQL> -- Disk sort temp coverage FS07: NULLS FIRST/LAST ordered full scan
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DST_COV_FS07
+(
+    ID       INTEGER,
+    GRP_ID   INTEGER,
+    K1       VARCHAR(64),
+    K2       VARCHAR(64),
+    PAD1     VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DST_COV_FS07
+SELECT LEVEL,
+       MOD(LEVEL, 41),
+       CASE WHEN MOD(LEVEL, 11) = 0 THEN NULL
+            ELSE 'K' || LPAD(TO_CHAR(MOD(LEVEL, 300)), 4, '0') END,
+       CASE WHEN MOD(LEVEL, 13) = 0 THEN NULL
+            ELSE 'S' || LPAD(TO_CHAR(MOD(LEVEL, 500)), 4, '0') END,
+       RPAD('N' || TO_CHAR(LEVEL), 3200, 'N')
+  FROM DUAL
+CONNECT BY LEVEL <= 2100;
+2100 rows inserted.
+iSQL> SELECT /*+ TEMP_TBS_DISK */ ID, K1, K2
+  FROM DST_COV_FS07
+ ORDER BY K1 NULLS FIRST, K2 NULLS LAST, ID
+ LIMIT 80;
+ID          K1                                                                
+---------------------------------------------------------------------------------
+K2                                                                
+--------------------------------------------------------------------
+506                                                                           
+S0006                                                             
+1507                                                                          
+S0007                                                             
+11                                                                            
+S0011                                                             
+1012                                                                          
+S0012                                                             
+2013                                                                          
+S0013                                                             
+517                                                                           
+S0017                                                             
+1518                                                                          
+S0018                                                             
+22                                                                            
+S0022                                                             
+1023                                                                          
+S0023                                                             
+2024                                                                          
+S0024                                                             
+528                                                                           
+S0028                                                             
+1529                                                                          
+S0029                                                             
+33                                                                            
+S0033                                                             
+1034                                                                          
+S0034                                                             
+2035                                                                          
+S0035                                                             
+539                                                                           
+S0039                                                             
+1540                                                                          
+S0040                                                             
+44                                                                            
+S0044                                                             
+1045                                                                          
+S0045                                                             
+2046                                                                          
+S0046                                                             
+550                                                                           
+S0050                                                             
+1551                                                                          
+S0051                                                             
+55                                                                            
+S0055                                                             
+1056                                                                          
+S0056                                                             
+2057                                                                          
+S0057                                                             
+561                                                                           
+S0061                                                             
+1562                                                                          
+S0062                                                             
+66                                                                            
+S0066                                                             
+1067                                                                          
+S0067                                                             
+2068                                                                          
+S0068                                                             
+77                                                                            
+S0077                                                             
+1078                                                                          
+S0078                                                             
+2079                                                                          
+S0079                                                             
+583                                                                           
+S0083                                                             
+1584                                                                          
+S0084                                                             
+88                                                                            
+S0088                                                             
+1089                                                                          
+S0089                                                             
+2090                                                                          
+S0090                                                             
+594                                                                           
+S0094                                                             
+1595                                                                          
+S0095                                                             
+99                                                                            
+S0099                                                             
+1100                                                                          
+S0100                                                             
+605                                                                           
+S0105                                                             
+1606                                                                          
+S0106                                                             
+110                                                                           
+S0110                                                             
+1111                                                                          
+S0111                                                             
+616                                                                           
+S0116                                                             
+1617                                                                          
+S0117                                                             
+121                                                                           
+S0121                                                             
+1122                                                                          
+S0122                                                             
+627                                                                           
+S0127                                                             
+1628                                                                          
+S0128                                                             
+132                                                                           
+S0132                                                             
+1133                                                                          
+S0133                                                             
+638                                                                           
+S0138                                                             
+1639                                                                          
+S0139                                                             
+649                                                                           
+S0149                                                             
+1650                                                                          
+S0150                                                             
+154                                                                           
+S0154                                                             
+1155                                                                          
+S0155                                                             
+660                                                                           
+S0160                                                             
+1661                                                                          
+S0161                                                             
+165                                                                           
+S0165                                                             
+1166                                                                          
+S0166                                                             
+671                                                                           
+S0171                                                             
+1672                                                                          
+S0172                                                             
+176                                                                           
+S0176                                                             
+1177                                                                          
+S0177                                                             
+682                                                                           
+S0182                                                             
+1683                                                                          
+S0183                                                             
+187                                                                           
+S0187                                                             
+1188                                                                          
+S0188                                                             
+693                                                                           
+S0193                                                             
+1694                                                                          
+S0194                                                             
+198                                                                           
+S0198                                                             
+1199                                                                          
+S0199                                                             
+704                                                                           
+S0204                                                             
+1705                                                                          
+S0205                                                             
+209                                                                           
+S0209                                                             
+1210                                                                          
+S0210                                                             
+80 rows selected.
+iSQL> SELECT CASE WHEN COUNT(*) = 2100 THEN 1 ELSE 0 END AS PASS_COUNT
+  FROM DST_COV_FS07;
+PASS_COUNT  
+--------------
+1           
+1 row selected.
+iSQL> DROP TABLE DST_COV_FS07;
+Drop success.

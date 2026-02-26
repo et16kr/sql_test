@@ -1,0 +1,160 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify packed-row hash join range scenario correctness.
+iSQL> -- Checks: Hash join cardinality and range-filtered rows are correct.
+iSQL> -- Disk hash temp packed-row coverage H04: hash range scan path (openHashCursor/fetchHashNext)
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DHASH_COV04_A
+(
+    ID       INTEGER,
+    K1       VARCHAR(64),
+    N1       NUMERIC(12)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> CREATE TABLE DHASH_COV04_B
+(
+    ID       INTEGER,
+    K1       VARCHAR(64),
+    PAD1     VARCHAR(3200),
+    PAD2     VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DHASH_COV04_A
+SELECT LEVEL,
+       'K' || LPAD(TO_CHAR(MOD(LEVEL, 900)), 4, '0'),
+       MOD(LEVEL * 17, 100000)
+  FROM DUAL
+CONNECT BY LEVEL <= 3500;
+3500 rows inserted.
+iSQL> INSERT INTO DHASH_COV04_B
+SELECT LEVEL,
+       'K' || LPAD(TO_CHAR(MOD(LEVEL, 900)), 4, '0'),
+       RPAD('B1_' || TO_CHAR(LEVEL), 3200, 'X'),
+       RPAD('B2_' || TO_CHAR(MOD(LEVEL, 400)), 3200, 'Y')
+  FROM DUAL
+CONNECT BY LEVEL <= 1800;
+1800 rows inserted.
+iSQL> SELECT /*+ TEMP_TBS_DISK ORDERED USE_HASH(B, A) */
+       COUNT(*) AS JOIN_CNT
+  FROM DHASH_COV04_A A, DHASH_COV04_B B
+ WHERE A.K1 = B.K1;
+JOIN_CNT             
+-----------------------
+7000                 
+1 row selected.
+iSQL> SELECT CASE WHEN COUNT(*) = 7000 THEN 1 ELSE 0 END AS PASS_JOIN_CNT
+  FROM (
+        SELECT /*+ TEMP_TBS_DISK ORDERED USE_HASH(B, A) */
+               A.ID,
+               B.ID AS BID
+          FROM DHASH_COV04_A A, DHASH_COV04_B B
+         WHERE A.K1 = B.K1
+       ) X;
+PASS_JOIN_CNT 
+----------------
+1           
+1 row selected.
+iSQL> SELECT /*+ TEMP_TBS_DISK ORDERED USE_HASH(B, A) */
+       A.K1,
+       LENGTH(B.PAD1) AS L1,
+       LENGTH(B.PAD2) AS L2
+  FROM DHASH_COV04_A A, DHASH_COV04_B B
+ WHERE A.K1 = B.K1
+ ORDER BY A.K1, A.ID
+ LIMIT 40;
+K1                                                                
+--------------------------------------------------------------------
+L1                   L2                   
+---------------------------------------------
+K0000                                                             
+3200                 3200                 
+K0000                                                             
+3200                 3200                 
+K0000                                                             
+3200                 3200                 
+K0000                                                             
+3200                 3200                 
+K0000                                                             
+3200                 3200                 
+K0000                                                             
+3200                 3200                 
+K0001                                                             
+3200                 3200                 
+K0001                                                             
+3200                 3200                 
+K0001                                                             
+3200                 3200                 
+K0001                                                             
+3200                 3200                 
+K0001                                                             
+3200                 3200                 
+K0001                                                             
+3200                 3200                 
+K0001                                                             
+3200                 3200                 
+K0001                                                             
+3200                 3200                 
+K0002                                                             
+3200                 3200                 
+K0002                                                             
+3200                 3200                 
+K0002                                                             
+3200                 3200                 
+K0002                                                             
+3200                 3200                 
+K0002                                                             
+3200                 3200                 
+K0002                                                             
+3200                 3200                 
+K0002                                                             
+3200                 3200                 
+K0002                                                             
+3200                 3200                 
+K0003                                                             
+3200                 3200                 
+K0003                                                             
+3200                 3200                 
+K0003                                                             
+3200                 3200                 
+K0003                                                             
+3200                 3200                 
+K0003                                                             
+3200                 3200                 
+K0003                                                             
+3200                 3200                 
+K0003                                                             
+3200                 3200                 
+K0003                                                             
+3200                 3200                 
+K0004                                                             
+3200                 3200                 
+K0004                                                             
+3200                 3200                 
+K0004                                                             
+3200                 3200                 
+K0004                                                             
+3200                 3200                 
+K0004                                                             
+3200                 3200                 
+K0004                                                             
+3200                 3200                 
+K0004                                                             
+3200                 3200                 
+K0004                                                             
+3200                 3200                 
+K0005                                                             
+3200                 3200                 
+K0005                                                             
+3200                 3200                 
+40 rows selected.
+iSQL> DROP TABLE DHASH_COV04_A;
+Drop success.
+iSQL> DROP TABLE DHASH_COV04_B;
+Drop success.

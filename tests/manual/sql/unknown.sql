@@ -1,0 +1,3 @@
+--+FOO BAR;
+--CASE:PASS
+SELECT 1;

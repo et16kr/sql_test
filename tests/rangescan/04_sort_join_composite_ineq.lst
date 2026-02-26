@@ -1,0 +1,59 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify composite inequality sort join correctness.
+iSQL> -- Checks: Composite predicate evaluation and result cardinality are correct.
+iSQL> -- Disk sort temp coverage RS04: composite key sort join with inequality
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DST_COV_RS04_A
+(
+    ID      INTEGER,
+    K1      INTEGER,
+    K2      INTEGER,
+    PAD1    VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> CREATE TABLE DST_COV_RS04_B
+(
+    ID      INTEGER,
+    K1      INTEGER,
+    K2      INTEGER,
+    PAD1    VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DST_COV_RS04_A
+SELECT LEVEL,
+       MOD(LEVEL, 500),
+       MOD(LEVEL, 61),
+       RPAD('RA' || TO_CHAR(LEVEL), 3200, 'R')
+  FROM DUAL
+CONNECT BY LEVEL <= 1700;
+1700 rows inserted.
+iSQL> INSERT INTO DST_COV_RS04_B
+SELECT LEVEL,
+       MOD(LEVEL, 500),
+       MOD(LEVEL, 61),
+       RPAD('RB' || TO_CHAR(LEVEL), 3200, 'S')
+  FROM DUAL
+CONNECT BY LEVEL <= 900;
+900 rows inserted.
+iSQL> SELECT /*+ TEMP_TBS_DISK USE_SORT(B, A) NO_USE_HASH(B) */ COUNT(*) AS JOIN_CNT
+  FROM DST_COV_RS04_A A,
+       DST_COV_RS04_B B
+ WHERE A.K1 = B.K1
+   AND A.K2 >= B.K2
+   AND A.K2 <= (B.K2 + 2);
+JOIN_CNT             
+-----------------------
+900                  
+1 row selected.
+iSQL> DROP TABLE DST_COV_RS04_A;
+Drop success.
+iSQL> DROP TABLE DST_COV_RS04_B;
+Drop success.

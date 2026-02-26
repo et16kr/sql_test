@@ -1,0 +1,110 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Provide non-packed hash baseline to detect regression from packed-row changes.
+iSQL> -- Checks: Existing hash group/join behaviors remain unchanged.
+iSQL> -- Disk hash temp coverage H09: non-packed regression baseline (fixed columns only)
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DHASH_COV09
+(
+    ID       INTEGER,
+    C1       CHAR(8),
+    C2       CHAR(8),
+    N1       NUMERIC(12)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> CREATE TABLE DHASH_COV09_B
+(
+    ID       INTEGER,
+    C1       CHAR(8),
+    N2       NUMERIC(12)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DHASH_COV09
+SELECT LEVEL,
+       LPAD(TO_CHAR(MOD(LEVEL, 300)), 8, '0'),
+       LPAD(TO_CHAR(MOD(LEVEL, 200)), 8, '0'),
+       MOD(LEVEL * 19, 100000)
+  FROM DUAL
+CONNECT BY LEVEL <= 2200;
+2200 rows inserted.
+iSQL> INSERT INTO DHASH_COV09_B
+SELECT LEVEL,
+       LPAD(TO_CHAR(MOD(LEVEL, 300)), 8, '0'),
+       MOD(LEVEL * 23, 100000)
+  FROM DUAL
+CONNECT BY LEVEL <= 1500;
+1500 rows inserted.
+iSQL> SELECT /*+ TEMP_TBS_DISK GROUP_HASH */
+       C1,
+       C2,
+       COUNT(*) AS CNT_V,
+       SUM(N1) AS SUM_V
+  FROM DHASH_COV09
+ GROUP BY C1, C2
+ ORDER BY C1, C2
+ LIMIT 30;
+C1        C2        CNT_V                SUM_V       
+----------------------------------------------------------
+00000000  00000000  3                    68400       
+00000000  00000100  4                    91200       
+00000001  00000001  4                    68476       
+00000001  00000101  4                    91276       
+00000002  00000002  4                    68552       
+00000002  00000102  4                    91352       
+00000003  00000003  4                    68628       
+00000003  00000103  4                    91428       
+00000004  00000004  4                    68704       
+00000004  00000104  4                    91504       
+00000005  00000005  4                    68780       
+00000005  00000105  4                    91580       
+00000006  00000006  4                    68856       
+00000006  00000106  4                    91656       
+00000007  00000007  4                    68932       
+00000007  00000107  4                    91732       
+00000008  00000008  4                    69008       
+00000008  00000108  4                    91808       
+00000009  00000009  4                    69084       
+00000009  00000109  4                    91884       
+00000010  00000010  4                    69160       
+00000010  00000110  4                    91960       
+00000011  00000011  4                    69236       
+00000011  00000111  4                    92036       
+00000012  00000012  4                    69312       
+00000012  00000112  4                    92112       
+00000013  00000013  4                    69388       
+00000013  00000113  4                    92188       
+00000014  00000014  4                    69464       
+00000014  00000114  4                    92264       
+30 rows selected.
+iSQL> SELECT CASE WHEN SUM(CNT_V) = 2200 THEN 1 ELSE 0 END AS PASS_GROUP_CNT
+  FROM (
+        SELECT /*+ TEMP_TBS_DISK GROUP_HASH */
+               C1,
+               C2,
+               COUNT(*) AS CNT_V
+          FROM DHASH_COV09
+         GROUP BY C1, C2
+       ) G;
+PASS_GROUP_CNT 
+-----------------
+1           
+1 row selected.
+iSQL> SELECT /*+ TEMP_TBS_DISK ORDERED USE_HASH(B, A) */
+       COUNT(*) AS JOIN_CNT
+  FROM DHASH_COV09 A, DHASH_COV09_B B
+ WHERE A.C1 = B.C1;
+JOIN_CNT             
+-----------------------
+11000                
+1 row selected.
+iSQL> DROP TABLE DHASH_COV09;
+Drop success.
+iSQL> DROP TABLE DHASH_COV09_B;
+Drop success.

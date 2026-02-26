@@ -1,0 +1,9 @@
+../sql/pass.sql
+../sql/setenv.sql
+../sql/env_reset.sql
+../sql/skip.sql
+../sql/order.sql
+../sql/fail.sql
+../sql/missing.sql
+../sql/error.sql
+../sql/triple/test.sql

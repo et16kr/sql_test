@@ -1,0 +1,89 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify DISTINCT_HASH duplicate handling when variable-length keys share same length.
+iSQL> -- Checks: Duplicate keys with same physical length are deduplicated correctly.
+iSQL> -- Disk hash temp packed-row coverage H02: distinct(unique) with same-length duplicates
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DHASH_COV02
+(
+    ID       INTEGER,
+    K1       VARCHAR(120),
+    PAD1     VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DHASH_COV02
+SELECT LEVEL,
+       'KEY_' || LPAD(TO_CHAR(MOD(LEVEL, 200)), 3, '0'),
+       RPAD('P' || TO_CHAR(LEVEL), 3200, 'P')
+  FROM DUAL
+CONNECT BY LEVEL <= 3000;
+3000 rows inserted.
+iSQL> SELECT /*+ TEMP_TBS_DISK DISTINCT_HASH */
+       COUNT(*) AS DISTINCT_CNT
+  FROM (
+        SELECT DISTINCT K1
+          FROM DHASH_COV02
+       ) D;
+DISTINCT_CNT         
+-----------------------
+200                  
+1 row selected.
+iSQL> SELECT /*+ TEMP_TBS_DISK DISTINCT_HASH */
+       K1
+  FROM (
+        SELECT DISTINCT K1
+          FROM DHASH_COV02
+       ) D
+ ORDER BY K1
+ LIMIT 30;
+K1                                                                                                                        
+----------------------------------------------------------------------------------------------------------------------------
+KEY_000                                                                                                                   
+KEY_001                                                                                                                   
+KEY_002                                                                                                                   
+KEY_003                                                                                                                   
+KEY_004                                                                                                                   
+KEY_005                                                                                                                   
+KEY_006                                                                                                                   
+KEY_007                                                                                                                   
+KEY_008                                                                                                                   
+KEY_009                                                                                                                   
+KEY_010                                                                                                                   
+KEY_011                                                                                                                   
+KEY_012                                                                                                                   
+KEY_013                                                                                                                   
+KEY_014                                                                                                                   
+KEY_015                                                                                                                   
+KEY_016                                                                                                                   
+KEY_017                                                                                                                   
+KEY_018                                                                                                                   
+KEY_019                                                                                                                   
+KEY_020                                                                                                                   
+KEY_021                                                                                                                   
+KEY_022                                                                                                                   
+KEY_023                                                                                                                   
+KEY_024                                                                                                                   
+KEY_025                                                                                                                   
+KEY_026                                                                                                                   
+KEY_027                                                                                                                   
+KEY_028                                                                                                                   
+KEY_029                                                                                                                   
+30 rows selected.
+iSQL> SELECT CASE WHEN COUNT(*) = 200 THEN 1 ELSE 0 END AS PASS_DISTINCT_CNT
+  FROM (
+        SELECT /*+ TEMP_TBS_DISK DISTINCT_HASH */ DISTINCT K1
+          FROM DHASH_COV02
+       ) D;
+PASS_DISTINCT_CNT 
+--------------------
+1           
+1 row selected.
+iSQL> DROP TABLE DHASH_COV02;
+Drop success.

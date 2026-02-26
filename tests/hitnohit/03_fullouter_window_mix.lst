@@ -1,0 +1,135 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify full outer join result combined with window processing remains correct.
+iSQL> -- Checks: Join cardinality and downstream window values are valid.
+iSQL> -- Disk sort temp coverage 20: full outer sort join + window update mixed scenario
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DST_COV20_A
+(
+    ID       INTEGER,
+    GRP_ID   INTEGER,
+    KEY1     INTEGER,
+    PAD1     VARCHAR(3200),
+    PAD2     VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> CREATE TABLE DST_COV20_B
+(
+    ID       INTEGER,
+    GRP_ID   INTEGER,
+    KEY1     INTEGER,
+    PAD1     VARCHAR(3200),
+    PAD2     VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DST_COV20_A
+SELECT LEVEL,
+       MOD(LEVEL, 33),
+       LEVEL,
+       RPAD('XA' || TO_CHAR(LEVEL), 3200, 'X'),
+       RPAD('YA' || TO_CHAR(MOD(LEVEL, 80)), 3200, 'Y')
+  FROM DUAL
+CONNECT BY LEVEL <= 900;
+900 rows inserted.
+iSQL> INSERT INTO DST_COV20_B
+SELECT LEVEL,
+       MOD(LEVEL, 33),
+       LEVEL + 300,
+       RPAD('XB' || TO_CHAR(LEVEL), 3200, 'Z'),
+       RPAD('YB' || TO_CHAR(MOD(LEVEL, 80)), 3200, 'W')
+  FROM DUAL
+CONNECT BY LEVEL <= 900;
+900 rows inserted.
+iSQL> SELECT GID, RN
+  FROM (
+        SELECT /*+ TEMP_TBS_DISK USE_SORT(B, A) NO_USE_HASH(B) */
+               CASE WHEN A.GRP_ID IS NULL THEN B.GRP_ID ELSE A.GRP_ID END AS GID,
+               ROW_NUMBER() OVER (
+                   PARTITION BY CASE WHEN A.GRP_ID IS NULL THEN B.GRP_ID ELSE A.GRP_ID END
+                   ORDER BY CASE WHEN A.ID IS NULL THEN B.ID ELSE A.ID END
+               ) AS RN
+          FROM DST_COV20_A A FULL OUTER JOIN DST_COV20_B B
+            ON A.KEY1 = B.KEY1
+       ) X
+ WHERE RN <= 2
+ ORDER BY GID, RN;
+GID         RN                   
+------------------------------------
+0           1                    
+0           2                    
+1           1                    
+1           2                    
+2           1                    
+2           2                    
+3           1                    
+3           2                    
+4           1                    
+4           2                    
+5           1                    
+5           2                    
+6           1                    
+6           2                    
+7           1                    
+7           2                    
+8           1                    
+8           2                    
+9           1                    
+9           2                    
+10          1                    
+10          2                    
+11          1                    
+11          2                    
+12          1                    
+12          2                    
+13          1                    
+13          2                    
+14          1                    
+14          2                    
+15          1                    
+15          2                    
+16          1                    
+16          2                    
+17          1                    
+17          2                    
+18          1                    
+18          2                    
+19          1                    
+19          2                    
+20          1                    
+20          2                    
+21          1                    
+21          2                    
+22          1                    
+22          2                    
+23          1                    
+23          2                    
+24          1                    
+24          2                    
+25          1                    
+25          2                    
+26          1                    
+26          2                    
+27          1                    
+27          2                    
+28          1                    
+28          2                    
+29          1                    
+29          2                    
+30          1                    
+30          2                    
+31          1                    
+31          2                    
+32          1                    
+32          2                    
+66 rows selected.
+iSQL> DROP TABLE DST_COV20_A;
+Drop success.
+iSQL> DROP TABLE DST_COV20_B;
+Drop success.

@@ -1,0 +1,67 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify DISTINCT_HASH distinguishes keys with same prefix but different real lengths.
+iSQL> -- Checks: Length-sensitive uniqueness works for packed variable columns.
+iSQL> -- Disk hash temp packed-row coverage H03: same prefix, different actual var length
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DHASH_COV03
+(
+    ID       INTEGER,
+    K1       VARCHAR(128),
+    PAD1     VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DHASH_COV03
+SELECT LEVEL,
+       CASE MOD(LEVEL, 5)
+            WHEN 0 THEN 'PX'
+            WHEN 1 THEN 'PXA'
+            WHEN 2 THEN 'PXAA'
+            WHEN 3 THEN 'PXAAA'
+            ELSE 'PXAAAA'
+       END,
+       RPAD('Q' || TO_CHAR(LEVEL), 3200, 'Q')
+  FROM DUAL
+CONNECT BY LEVEL <= 2500;
+2500 rows inserted.
+iSQL> SELECT /*+ TEMP_TBS_DISK DISTINCT_HASH */
+       K1,
+       LENGTH(K1) AS L1
+  FROM (
+        SELECT DISTINCT K1
+          FROM DHASH_COV03
+       ) D
+ ORDER BY L1, K1;
+K1                                                                                                                                
+------------------------------------------------------------------------------------------------------------------------------------
+L1                   
+-----------------------
+PX                                                                                                                                
+2                    
+PXA                                                                                                                               
+3                    
+PXAA                                                                                                                              
+4                    
+PXAAA                                                                                                                             
+5                    
+PXAAAA                                                                                                                            
+6                    
+5 rows selected.
+iSQL> SELECT CASE WHEN COUNT(*) = 5 THEN 1 ELSE 0 END AS PASS_PREFIX_LEN
+  FROM (
+        SELECT /*+ TEMP_TBS_DISK DISTINCT_HASH */ DISTINCT K1
+          FROM DHASH_COV03
+       ) D;
+PASS_PREFIX_LEN 
+------------------
+1           
+1 row selected.
+iSQL> DROP TABLE DHASH_COV03;
+Drop success.

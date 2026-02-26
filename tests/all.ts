@@ -1,0 +1,9 @@
+./fullscan/fullscan.ts
+./hash/hash.ts
+./hierarchy/hierarchy.ts
+./hitnohit/hitnohit.ts
+./packedrow/packedrow.ts
+./rangescan/rangescan.ts
+./setop/setop.ts
+./viewscan/viewscan.ts
+./window/window.ts

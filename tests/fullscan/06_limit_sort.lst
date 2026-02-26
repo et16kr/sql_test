@@ -1,0 +1,102 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify LIMIT with ORDER BY on disk temp sort path.
+iSQL> -- Checks: Top-N ordering is correct and deterministic.
+iSQL> -- Disk sort temp coverage 06: LIMIT-SORT on wide rows
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DST_COV06
+(
+    ID       INTEGER,
+    SCORE    NUMERIC(12),
+    TAG      VARCHAR(64),
+    PAD1     VARCHAR(3200),
+    PAD2     VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DST_COV06
+SELECT LEVEL,
+       MOD(LEVEL * 97, 100000),
+       'T' || TO_CHAR(MOD(LEVEL, 40)),
+       RPAD('Q' || TO_CHAR(MOD(LEVEL, 300)), 3200, 'Q'),
+       RPAD('W' || TO_CHAR(MOD(LEVEL, 500)), 3200, 'W')
+  FROM DUAL
+CONNECT BY LEVEL <= 2200;
+2200 rows inserted.
+iSQL> SELECT /*+ TEMP_TBS_DISK */ ID, SCORE, TAG
+  FROM DST_COV06
+ ORDER BY SCORE DESC, ID
+ LIMIT 30;
+ID          SCORE       
+---------------------------
+TAG                                                               
+--------------------------------------------------------------------
+2061        99917       
+T21                                                               
+1030        99910       
+T30                                                               
+2060        99820       
+T20                                                               
+1029        99813       
+T29                                                               
+2059        99723       
+T19                                                               
+1028        99716       
+T28                                                               
+2058        99626       
+T18                                                               
+1027        99619       
+T27                                                               
+2057        99529       
+T17                                                               
+1026        99522       
+T26                                                               
+2056        99432       
+T16                                                               
+1025        99425       
+T25                                                               
+2055        99335       
+T15                                                               
+1024        99328       
+T24                                                               
+2054        99238       
+T14                                                               
+1023        99231       
+T23                                                               
+2053        99141       
+T13                                                               
+1022        99134       
+T22                                                               
+2052        99044       
+T12                                                               
+1021        99037       
+T21                                                               
+2051        98947       
+T11                                                               
+1020        98940       
+T20                                                               
+2050        98850       
+T10                                                               
+1019        98843       
+T19                                                               
+2049        98753       
+T9                                                                
+1018        98746       
+T18                                                               
+2048        98656       
+T8                                                                
+1017        98649       
+T17                                                               
+2047        98559       
+T7                                                                
+1016        98552       
+T16                                                               
+30 rows selected.
+iSQL> DROP TABLE DST_COV06;
+Drop success.

@@ -1,0 +1,86 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Provide non-packed baseline behavior for full scan path.
+iSQL> -- Checks: Baseline count/result stays unchanged versus packed-row coverage changes.
+iSQL> -- Disk sort temp coverage 03: small fixed-width row (non packed path baseline)
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DST_COV03
+(
+    ID       INTEGER,
+    GRP_ID   INTEGER,
+    C1       CHAR(8),
+    C2       CHAR(8),
+    N1       NUMERIC(10)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DST_COV03
+SELECT LEVEL,
+       MOD(LEVEL, 31),
+       LPAD(TO_CHAR(MOD(LEVEL, 100)), 8, '0'),
+       LPAD(TO_CHAR(MOD(LEVEL, 77)), 8, '0'),
+       MOD(LEVEL * 13, 10000)
+  FROM DUAL
+CONNECT BY LEVEL <= 1800;
+1800 rows inserted.
+iSQL> SELECT /*+ TEMP_TBS_DISK */ ID, GRP_ID, N1
+  FROM DST_COV03
+ ORDER BY C1, C2, N1 DESC
+ LIMIT 40;
+ID          GRP_ID      N1          
+----------------------------------------
+1700        26          2100        
+700         18          9100        
+1400        5           8200        
+400         28          5200        
+1100        15          4300        
+100         7           1300        
+1800        2           3400        
+800         25          400         
+1500        12          9500        
+500         4           6500        
+1200        22          5600        
+200         14          2600        
+900         1           1700        
+1600        19          800         
+600         11          7800        
+1300        29          6900        
+300         21          3900        
+1000        8           3000        
+1001        9           3013        
+1           1           13          
+1701        27          2113        
+701         19          9113        
+1401        6           8213        
+401         29          5213        
+1101        16          4313        
+101         8           1313        
+801         26          413         
+1501        13          9513        
+501         5           6513        
+1201        23          5613        
+201         15          2613        
+901         2           1713        
+1601        20          813         
+601         12          7813        
+1301        30          6913        
+301         22          3913        
+1002        10          3026        
+2           2           26          
+1702        28          2126        
+702         20          9126        
+40 rows selected.
+iSQL> SELECT CASE WHEN COUNT(*) = 1800 THEN 1 ELSE 0 END AS PASS_COUNT
+  FROM DST_COV03;
+PASS_COUNT  
+--------------
+1           
+1 row selected.
+iSQL> DROP TABLE DST_COV03;
+Drop success.

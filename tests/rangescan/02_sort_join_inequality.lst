@@ -1,0 +1,55 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify inequality-condition sort join correctness.
+iSQL> -- Checks: Range-based join filtering and result cardinality are correct.
+iSQL> -- Disk sort temp coverage 11: range-like sort join predicate
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DST_COV11_A
+(
+    ID     INTEGER,
+    K1     INTEGER,
+    PAD1   VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> CREATE TABLE DST_COV11_B
+(
+    ID     INTEGER,
+    K1     INTEGER,
+    PAD1   VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DST_COV11_A
+SELECT LEVEL,
+       MOD(LEVEL, 500),
+       RPAD('A' || TO_CHAR(LEVEL), 3200, 'A')
+  FROM DUAL
+CONNECT BY LEVEL <= 1400;
+1400 rows inserted.
+iSQL> INSERT INTO DST_COV11_B
+SELECT LEVEL,
+       MOD(LEVEL, 500),
+       RPAD('B' || TO_CHAR(LEVEL), 3200, 'B')
+  FROM DUAL
+CONNECT BY LEVEL <= 900;
+900 rows inserted.
+iSQL> SELECT /*+ TEMP_TBS_DISK USE_SORT(B, A) NO_USE_HASH(B) */
+       COUNT(*) AS RANGE_JOIN_CNT
+  FROM DST_COV11_A A,
+       DST_COV11_B B
+ WHERE A.K1 >= B.K1
+   AND A.K1 <= (B.K1 + 2);
+RANGE_JOIN_CNT       
+-----------------------
+7790                 
+1 row selected.
+iSQL> DROP TABLE DST_COV11_A;
+Drop success.
+iSQL> DROP TABLE DST_COV11_B;
+Drop success.

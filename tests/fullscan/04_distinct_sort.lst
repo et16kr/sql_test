@@ -1,0 +1,166 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify DISTINCT_SORT removes duplicates correctly on disk temp path.
+iSQL> -- Checks: Distinct output cardinality and ordered values are as expected.
+iSQL> -- Disk sort temp coverage 04: DISTINCT_SORT with wide variable columns
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DST_COV04
+(
+    ID      INTEGER,
+    K1      VARCHAR(64),
+    K2      VARCHAR(64),
+    PAD1    VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DST_COV04
+SELECT LEVEL,
+       'K' || TO_CHAR(MOD(LEVEL, 120)),
+       'S' || TO_CHAR(MOD(LEVEL, 45)),
+       RPAD('P' || TO_CHAR(MOD(LEVEL, 33)), 3200, 'P')
+  FROM DUAL
+CONNECT BY LEVEL <= 2400;
+2400 rows inserted.
+iSQL> SELECT /*+ TEMP_TBS_DISK DISTINCT_SORT */ DISTINCT K1, K2
+  FROM DST_COV04
+ ORDER BY K1, K2
+ LIMIT 60;
+K1                                                                
+--------------------------------------------------------------------
+K2                                                                
+--------------------------------------------------------------------
+K0                                                                
+S0                                                                
+K0                                                                
+S15                                                               
+K0                                                                
+S30                                                               
+K1                                                                
+S1                                                                
+K1                                                                
+S16                                                               
+K1                                                                
+S31                                                               
+K10                                                               
+S10                                                               
+K10                                                               
+S25                                                               
+K10                                                               
+S40                                                               
+K100                                                              
+S10                                                               
+K100                                                              
+S25                                                               
+K100                                                              
+S40                                                               
+K101                                                              
+S11                                                               
+K101                                                              
+S26                                                               
+K101                                                              
+S41                                                               
+K102                                                              
+S12                                                               
+K102                                                              
+S27                                                               
+K102                                                              
+S42                                                               
+K103                                                              
+S13                                                               
+K103                                                              
+S28                                                               
+K103                                                              
+S43                                                               
+K104                                                              
+S14                                                               
+K104                                                              
+S29                                                               
+K104                                                              
+S44                                                               
+K105                                                              
+S0                                                                
+K105                                                              
+S15                                                               
+K105                                                              
+S30                                                               
+K106                                                              
+S1                                                                
+K106                                                              
+S16                                                               
+K106                                                              
+S31                                                               
+K107                                                              
+S17                                                               
+K107                                                              
+S2                                                                
+K107                                                              
+S32                                                               
+K108                                                              
+S18                                                               
+K108                                                              
+S3                                                                
+K108                                                              
+S33                                                               
+K109                                                              
+S19                                                               
+K109                                                              
+S34                                                               
+K109                                                              
+S4                                                                
+K11                                                               
+S11                                                               
+K11                                                               
+S26                                                               
+K11                                                               
+S41                                                               
+K110                                                              
+S20                                                               
+K110                                                              
+S35                                                               
+K110                                                              
+S5                                                                
+K111                                                              
+S21                                                               
+K111                                                              
+S36                                                               
+K111                                                              
+S6                                                                
+K112                                                              
+S22                                                               
+K112                                                              
+S37                                                               
+K112                                                              
+S7                                                                
+K113                                                              
+S23                                                               
+K113                                                              
+S38                                                               
+K113                                                              
+S8                                                                
+K114                                                              
+S24                                                               
+K114                                                              
+S39                                                               
+K114                                                              
+S9                                                                
+K115                                                              
+S10                                                               
+K115                                                              
+S25                                                               
+K115                                                              
+S40                                                               
+60 rows selected.
+iSQL> SELECT CASE WHEN COUNT(*) = 2400 THEN 1 ELSE 0 END AS PASS_COUNT
+  FROM DST_COV04;
+PASS_COUNT  
+--------------
+1           
+1 row selected.
+iSQL> DROP TABLE DST_COV04;
+Drop success.

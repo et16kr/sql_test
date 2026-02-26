@@ -1,0 +1,157 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify packed-row update on fixed columns and GROUP_HASH re-read correctness.
+iSQL> -- Checks: Allowed updates are reflected and grouped aggregates stay correct.
+iSQL> -- Disk hash temp packed-row coverage H07: packed update path with fixed aggregate columns
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DHASH_COV07
+(
+    ID       INTEGER,
+    K1       VARCHAR(128),
+    N1       NUMERIC(12),
+    PAD1     VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DHASH_COV07
+SELECT LEVEL,
+       'G' || LPAD(TO_CHAR(MOD(LEVEL, 311)), 4, '0'),
+       MOD(LEVEL * 7, 1000),
+       RPAD('UP' || TO_CHAR(LEVEL), 3200, 'U')
+  FROM DUAL
+CONNECT BY LEVEL <= 5000;
+5000 rows inserted.
+iSQL> SELECT /*+ TEMP_TBS_DISK GROUP_HASH */
+       K1,
+       COUNT(*) AS CNT_V,
+       SUM(N1) AS SUM_V,
+       MIN(N1) AS MIN_V,
+       MAX(N1) AS MAX_V
+  FROM DHASH_COV07
+ GROUP BY K1
+ ORDER BY K1
+ LIMIT 40;
+K1                                                                                                                                
+------------------------------------------------------------------------------------------------------------------------------------
+CNT_V                SUM_V       MIN_V       MAX_V       
+--------------------------------------------------------------
+G0000                                                                                                                             
+16                   8072        62          947         
+G0001                                                                                                                             
+17                   8191        7           954         
+G0002                                                                                                                             
+17                   8310        14          961         
+G0003                                                                                                                             
+17                   8429        21          968         
+G0004                                                                                                                             
+17                   8548        28          975         
+G0005                                                                                                                             
+17                   8667        35          982         
+G0006                                                                                                                             
+17                   8786        42          989         
+G0007                                                                                                                             
+17                   8905        49          996         
+G0008                                                                                                                             
+17                   8024        3           941         
+G0009                                                                                                                             
+17                   8143        10          948         
+G0010                                                                                                                             
+17                   8262        17          955         
+G0011                                                                                                                             
+17                   8381        24          962         
+G0012                                                                                                                             
+17                   8500        31          969         
+G0013                                                                                                                             
+17                   8619        38          976         
+G0014                                                                                                                             
+17                   8738        45          983         
+G0015                                                                                                                             
+17                   8857        52          990         
+G0016                                                                                                                             
+17                   8976        59          997         
+G0017                                                                                                                             
+17                   8095        4           951         
+G0018                                                                                                                             
+17                   8214        11          958         
+G0019                                                                                                                             
+17                   8333        18          965         
+G0020                                                                                                                             
+17                   8452        25          972         
+G0021                                                                                                                             
+17                   8571        32          979         
+G0022                                                                                                                             
+17                   8690        39          986         
+G0023                                                                                                                             
+17                   8809        46          993         
+G0024                                                                                                                             
+17                   7928        0           938         
+G0025                                                                                                                             
+16                   8040        60          945         
+G0026                                                                                                                             
+16                   8152        67          952         
+G0027                                                                                                                             
+16                   8264        74          959         
+G0028                                                                                                                             
+16                   8376        81          966         
+G0029                                                                                                                             
+16                   8488        88          973         
+G0030                                                                                                                             
+16                   8600        95          980         
+G0031                                                                                                                             
+16                   8712        102         987         
+G0032                                                                                                                             
+16                   8824        109         994         
+G0033                                                                                                                             
+16                   7936        1           939         
+G0034                                                                                                                             
+16                   8048        8           946         
+G0035                                                                                                                             
+16                   8160        15          953         
+G0036                                                                                                                             
+16                   8272        22          960         
+G0037                                                                                                                             
+16                   8384        29          967         
+G0038                                                                                                                             
+16                   8496        36          974         
+G0039                                                                                                                             
+16                   8608        43          981         
+40 rows selected.
+iSQL> SELECT CASE WHEN H.SUM_N1 = B.SUM_N1 THEN 1 ELSE 0 END AS PASS_SUM
+  FROM (
+        SELECT SUM(SUM_V) AS SUM_N1
+          FROM (
+                SELECT /*+ TEMP_TBS_DISK GROUP_HASH */
+                       K1,
+                       SUM(N1) AS SUM_V
+                  FROM DHASH_COV07
+                 GROUP BY K1
+               ) G
+       ) H,
+       (
+        SELECT SUM(N1) AS SUM_N1
+          FROM DHASH_COV07
+       ) B;
+PASS_SUM    
+--------------
+1           
+1 row selected.
+iSQL> SELECT CASE WHEN SUM(CNT_V) = 5000 THEN 1 ELSE 0 END AS PASS_CNT
+  FROM (
+        SELECT /*+ TEMP_TBS_DISK GROUP_HASH */
+               K1,
+               COUNT(*) AS CNT_V
+          FROM DHASH_COV07
+         GROUP BY K1
+       ) G;
+PASS_CNT    
+--------------
+1           
+1 row selected.
+iSQL> DROP TABLE DHASH_COV07;
+Drop success.

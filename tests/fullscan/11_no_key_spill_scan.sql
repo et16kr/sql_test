@@ -1,0 +1,45 @@
+-- Test Purpose: Verify NO_MERGE materialization scan path correctness under temp disk execution.
+-- Checks: Materialized row count and aggregate sum are correct.
+-- Disk sort temp coverage FS11: no-key materialization spill scan path
+-- Manual reference:
+--   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+--   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+
+--+SKIP BEGIN;
+DROP TABLE DST_COV_FS11;
+--+SKIP END;
+
+CREATE TABLE DST_COV_FS11
+(
+    ID       INTEGER,
+    GRP_ID   INTEGER,
+    PAD1     VARCHAR(3200),
+    PAD2     VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+
+INSERT INTO DST_COV_FS11
+SELECT LEVEL,
+       MOD(LEVEL, 97),
+       RPAD('A' || TO_CHAR(MOD(LEVEL, 500)), 3200, 'A'),
+       RPAD('B' || TO_CHAR(MOD(LEVEL, 200)), 3200, 'B')
+  FROM DUAL
+CONNECT BY LEVEL <= 8000;
+
+SELECT /*+ TEMP_TBS_DISK NO_MERGE(V) */ COUNT(*) AS MAT_CNT
+  FROM (
+        SELECT ID, GRP_ID, PAD1, PAD2
+          FROM DST_COV_FS11
+       ) V
+ WHERE V.GRP_ID BETWEEN 10 AND 70;
+
+SELECT /*+ TEMP_TBS_DISK NO_MERGE(V) */ SUM(V.ID) AS SUM_ID
+  FROM (
+        SELECT ID, GRP_ID, PAD1
+          FROM DST_COV_FS11
+       ) V
+ WHERE V.GRP_ID IN (3, 7, 11, 13);
+
+SELECT CASE WHEN COUNT(*) = 8000 THEN 1 ELSE 0 END AS PASS_COUNT
+  FROM DST_COV_FS11;
+
+DROP TABLE DST_COV_FS11;

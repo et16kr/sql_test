@@ -1,0 +1,136 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify UNION DISTINCT set operation correctness on sort temp path.
+iSQL> -- Checks: Duplicate elimination and final ordering are correct.
+iSQL> -- Disk sort temp coverage 16: UNION (distinct) + ORDER BY on disk temp
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DST_COV16_A
+(
+    K1     INTEGER,
+    K2     VARCHAR(64),
+    PAD1   VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> CREATE TABLE DST_COV16_B
+(
+    K1     INTEGER,
+    K2     VARCHAR(64),
+    PAD1   VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DST_COV16_A
+SELECT MOD(LEVEL, 300),
+       'A' || TO_CHAR(MOD(LEVEL, 90)),
+       RPAD('UA' || TO_CHAR(LEVEL), 3200, 'A')
+  FROM DUAL
+CONNECT BY LEVEL <= 1200;
+1200 rows inserted.
+iSQL> INSERT INTO DST_COV16_B
+SELECT MOD(LEVEL + 100, 300),
+       'B' || TO_CHAR(MOD(LEVEL, 90)),
+       RPAD('UB' || TO_CHAR(LEVEL), 3200, 'B')
+  FROM DUAL
+CONNECT BY LEVEL <= 1200;
+1200 rows inserted.
+iSQL> SELECT /*+ TEMP_TBS_DISK */ K1, K2
+  FROM (
+        SELECT K1, K2 FROM DST_COV16_A
+        UNION
+        SELECT K1, K2 FROM DST_COV16_B
+       ) U
+ ORDER BY K1, K2
+ LIMIT 80;
+K1          K2                                                                
+---------------------------------------------------------------------------------
+0           A0                                                                
+0           A30                                                               
+0           A60                                                               
+0           B20                                                               
+0           B50                                                               
+0           B80                                                               
+1           A1                                                                
+1           A31                                                               
+1           A61                                                               
+1           B21                                                               
+1           B51                                                               
+1           B81                                                               
+2           A2                                                                
+2           A32                                                               
+2           A62                                                               
+2           B22                                                               
+2           B52                                                               
+2           B82                                                               
+3           A3                                                                
+3           A33                                                               
+3           A63                                                               
+3           B23                                                               
+3           B53                                                               
+3           B83                                                               
+4           A34                                                               
+4           A4                                                                
+4           A64                                                               
+4           B24                                                               
+4           B54                                                               
+4           B84                                                               
+5           A35                                                               
+5           A5                                                                
+5           A65                                                               
+5           B25                                                               
+5           B55                                                               
+5           B85                                                               
+6           A36                                                               
+6           A6                                                                
+6           A66                                                               
+6           B26                                                               
+6           B56                                                               
+6           B86                                                               
+7           A37                                                               
+7           A67                                                               
+7           A7                                                                
+7           B27                                                               
+7           B57                                                               
+7           B87                                                               
+8           A38                                                               
+8           A68                                                               
+8           A8                                                                
+8           B28                                                               
+8           B58                                                               
+8           B88                                                               
+9           A39                                                               
+9           A69                                                               
+9           A9                                                                
+9           B29                                                               
+9           B59                                                               
+9           B89                                                               
+10          A10                                                               
+10          A40                                                               
+10          A70                                                               
+10          B0                                                                
+10          B30                                                               
+10          B60                                                               
+11          A11                                                               
+11          A41                                                               
+11          A71                                                               
+11          B1                                                                
+11          B31                                                               
+11          B61                                                               
+12          A12                                                               
+12          A42                                                               
+12          A72                                                               
+12          B2                                                                
+12          B32                                                               
+12          B62                                                               
+13          A13                                                               
+13          A43                                                               
+80 rows selected.
+iSQL> DROP TABLE DST_COV16_A;
+Drop success.
+iSQL> DROP TABLE DST_COV16_B;
+Drop success.

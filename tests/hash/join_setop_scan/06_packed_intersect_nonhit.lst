@@ -1,0 +1,189 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify packed-row INTERSECT/non-hit behavior with DISTINCT_HASH path.
+iSQL> -- Checks: Non-overlap and overlap set results are correct.
+iSQL> -- Disk hash temp packed-row coverage H06: INTERSECT path (same-row/non-hit)
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DHASH_COV06_A
+(
+    K1       INTEGER,
+    K2       VARCHAR(128),
+    PAD1     VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> CREATE TABLE DHASH_COV06_B
+(
+    K1       INTEGER,
+    K2       VARCHAR(128),
+    PAD1     VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DHASH_COV06_A
+SELECT LEVEL,
+       CASE MOD(LEVEL, 4)
+            WHEN 0 THEN 'PX'
+            WHEN 1 THEN 'PXA'
+            WHEN 2 THEN 'PXAA'
+            ELSE 'PXAAA'
+       END,
+       RPAD('IA' || TO_CHAR(LEVEL), 3200, 'I')
+  FROM DUAL
+CONNECT BY LEVEL <= 800;
+800 rows inserted.
+iSQL> INSERT INTO DHASH_COV06_B
+SELECT LEVEL + 400,
+       CASE MOD(LEVEL + 400, 4)
+            WHEN 0 THEN 'PX'
+            WHEN 1 THEN 'PXA'
+            WHEN 2 THEN 'PXAA'
+            ELSE 'PXAAA'
+       END,
+       RPAD('IB' || TO_CHAR(LEVEL), 3200, 'J')
+  FROM DUAL
+CONNECT BY LEVEL <= 800;
+800 rows inserted.
+iSQL> SELECT /*+ TEMP_TBS_DISK DISTINCT_HASH */
+       COUNT(*) AS INTERSECT_CNT
+  FROM (
+        SELECT K1, K2 FROM DHASH_COV06_A
+        INTERSECT
+        SELECT K1, K2 FROM DHASH_COV06_B
+       ) X;
+INTERSECT_CNT        
+-----------------------
+400                  
+1 row selected.
+iSQL> SELECT /*+ TEMP_TBS_DISK DISTINCT_HASH */
+       K1,
+       K2,
+       LENGTH(K2) AS L2
+  FROM (
+        SELECT K1, K2 FROM DHASH_COV06_A
+        INTERSECT
+        SELECT K1, K2 FROM DHASH_COV06_B
+       ) X
+ ORDER BY K1, K2
+ LIMIT 30;
+K1          
+--------------
+K2                                                                                                                                
+------------------------------------------------------------------------------------------------------------------------------------
+L2                   
+-----------------------
+401         
+PXA                                                                                                                               
+3                    
+402         
+PXAA                                                                                                                              
+4                    
+403         
+PXAAA                                                                                                                             
+5                    
+404         
+PX                                                                                                                                
+2                    
+405         
+PXA                                                                                                                               
+3                    
+406         
+PXAA                                                                                                                              
+4                    
+407         
+PXAAA                                                                                                                             
+5                    
+408         
+PX                                                                                                                                
+2                    
+409         
+PXA                                                                                                                               
+3                    
+410         
+PXAA                                                                                                                              
+4                    
+411         
+PXAAA                                                                                                                             
+5                    
+412         
+PX                                                                                                                                
+2                    
+413         
+PXA                                                                                                                               
+3                    
+414         
+PXAA                                                                                                                              
+4                    
+415         
+PXAAA                                                                                                                             
+5                    
+416         
+PX                                                                                                                                
+2                    
+417         
+PXA                                                                                                                               
+3                    
+418         
+PXAA                                                                                                                              
+4                    
+419         
+PXAAA                                                                                                                             
+5                    
+420         
+PX                                                                                                                                
+2                    
+421         
+PXA                                                                                                                               
+3                    
+422         
+PXAA                                                                                                                              
+4                    
+423         
+PXAAA                                                                                                                             
+5                    
+424         
+PX                                                                                                                                
+2                    
+425         
+PXA                                                                                                                               
+3                    
+426         
+PXAA                                                                                                                              
+4                    
+427         
+PXAAA                                                                                                                             
+5                    
+428         
+PX                                                                                                                                
+2                    
+429         
+PXA                                                                                                                               
+3                    
+430         
+PXAA                                                                                                                              
+4                    
+30 rows selected.
+iSQL> SELECT CASE WHEN COUNT(*) = 400 THEN 1 ELSE 0 END AS PASS_INTERSECT
+  FROM (
+        SELECT /*+ TEMP_TBS_DISK DISTINCT_HASH */
+               K1,
+               K2
+          FROM (
+                SELECT K1, K2 FROM DHASH_COV06_A
+                INTERSECT
+                SELECT K1, K2 FROM DHASH_COV06_B
+               ) Y
+       ) X;
+PASS_INTERSECT 
+-----------------
+1           
+1 row selected.
+iSQL> DROP TABLE DHASH_COV06_A;
+Drop success.
+iSQL> DROP TABLE DHASH_COV06_B;
+Drop success.

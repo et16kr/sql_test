@@ -1,0 +1,303 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify re-sort behavior in window processing with mixed variable columns.
+iSQL> -- Checks: Reordered window results remain stable and correct.
+iSQL> -- Disk sort temp coverage WN04: multi-window with mixed order keys (resort/update path)
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DST_COV_WN04
+(
+    ID       INTEGER,
+    GRP_ID   INTEGER,
+    V1       VARCHAR(3200),
+    V2       VARCHAR(3200),
+    V3       VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DST_COV_WN04
+SELECT LEVEL,
+       MOD(LEVEL, 37),
+       RPAD('A' || TO_CHAR(MOD(LEVEL, 700)), 3200, 'A'),
+       RPAD('B' || TO_CHAR(MOD(LEVEL, 300)), 3200, 'B'),
+       RPAD('C' || TO_CHAR(MOD(LEVEL, 100)), 3200, 'C')
+  FROM DUAL
+CONNECT BY LEVEL <= 2600;
+2600 rows inserted.
+iSQL> SELECT ID,
+       GRP_ID,
+       RN_ASC,
+       RN_DESC,
+       DR_DESC,
+       PREV_ID
+  FROM (
+        SELECT /*+ TEMP_TBS_DISK */
+               ID,
+               GRP_ID,
+               ROW_NUMBER() OVER (PARTITION BY GRP_ID ORDER BY V1, ID) AS RN_ASC,
+               ROW_NUMBER() OVER (PARTITION BY GRP_ID ORDER BY V2 DESC, ID) AS RN_DESC,
+               DENSE_RANK() OVER (PARTITION BY GRP_ID ORDER BY V2 DESC, ID) AS DR_DESC,
+               LAG(ID, 1, 0) OVER (PARTITION BY GRP_ID ORDER BY V1, ID) AS PREV_ID
+          FROM DST_COV_WN04
+       ) W
+ WHERE RN_ASC <= 2 OR RN_DESC <= 2
+ ORDER BY GRP_ID, ID
+ LIMIT 120;
+ID          GRP_ID      RN_ASC               RN_DESC              
+-----------------------------------------------------------------------
+DR_DESC              PREV_ID     
+------------------------------------
+111         0           1                    68                   
+68                   0           
+814         0           2                    41                   
+41                   111         
+999         0           22                   2                    
+2                    296         
+2109        0           70                   1                    
+1                    2183        
+112         1           2                    67                   
+67                   2110        
+1296        1           59                   1                    
+1                    593         
+1592        1           12                   2                    
+2                    889         
+2110        1           1                    68                   
+68                   0           
+113         2           1                    68                   
+68                   0           
+816         2           2                    40                   
+40                   113         
+1297        2           58                   1                    
+1                    594         
+1593        2           12                   2                    
+2                    890         
+114         3           1                    68                   
+68                   0           
+817         3           2                    40                   
+40                   114         
+1298        3           58                   1                    
+1                    595         
+1594        3           12                   2                    
+2                    891         
+115         4           2                    67                   
+67                   1410        
+1299        4           59                   2                    
+2                    596         
+1410        4           1                    42                   
+42                   0           
+2409        4           26                   1                    
+1                    1706        
+116         5           1                    66                   
+66                   0           
+819         5           2                    38                   
+38                   116         
+1596        5           13                   1                    
+1                    893         
+1892        5           48                   2                    
+2                    1448        
+117         6           1                    67                   
+67                   0           
+820         6           2                    39                   
+39                   117         
+1597        6           13                   1                    
+1                    894         
+1893        6           47                   2                    
+2                    1190        
+118         7           2                    67                   
+67                   710         
+710         7           1                    69                   
+69                   0           
+1598        7           14                   1                    
+1                    895         
+1894        7           48                   2                    
+2                    1191        
+119         8           1                    66                   
+66                   0           
+711         8           2                    68                   
+68                   119         
+1599        8           14                   1                    
+1                    896         
+1895        8           48                   2                    
+2                    1192        
+9           9           71                   1                    
+1                    2192        
+120         9           1                    66                   
+66                   0           
+823         9           2                    38                   
+38                   120         
+1896        9           47                   2                    
+2                    1193        
+10          10          1                    68                   
+68                   0           
+121         10          2                    65                   
+65                   10          
+1897        10          48                   1                    
+1                    1194        
+2193        10          71                   2                    
+2                    1490        
+11          11          1                    65                   
+65                   0           
+122         11          2                    64                   
+64                   11          
+1898        11          48                   1                    
+1                    1195        
+2194        11          70                   2                    
+2                    1491        
+123         12          1                    64                   
+64                   0           
+826         12          2                    37                   
+37                   123         
+1899        12          47                   1                    
+1                    1196        
+2195        12          70                   2                    
+2                    1492        
+124         13          1                    64                   
+64                   0           
+309         13          25                   1                    
+1                    2381        
+827         13          2                    37                   
+37                   124         
+2196        13          70                   2                    
+2                    1493        
+125         14          1                    63                   
+63                   0           
+828         14          2                    37                   
+37                   125         
+2197        14          70                   1                    
+1                    1494        
+2493        14          36                   2                    
+2                    1790        
+126         15          1                    63                   
+63                   0           
+829         15          2                    37                   
+37                   126         
+2198        15          70                   1                    
+1                    1495        
+2494        15          36                   2                    
+2                    1791        
+127         16          1                    63                   
+63                   0           
+830         16          2                    36                   
+36                   127         
+2199        16          70                   1                    
+1                    1496        
+2495        16          36                   2                    
+2                    1792        
+128         17          2                    63                   
+63                   2200        
+609         17          57                   1                    
+1                    757         
+2200        17          1                    70                   
+70                   0           
+2496        17          37                   2                    
+2                    1793        
+92          18          68                   2                    
+2                    2090        
+129         18          2                    62                   
+62                   2201        
+2201        18          1                    70                   
+70                   0           
+2497        18          37                   1                    
+1                    1794        
+93          19          68                   2                    
+2                    2091        
+130         19          2                    62                   
+62                   2202        
+2202        19          1                    70                   
+70                   0           
+2498        19          37                   1                    
+1                    1795        
+94          20          69                   2                    
+2                    2092        
+1500        20          1                    70                   
+70                   0           
+2203        20          2                    69                   
+69                   1500        
+2499        20          38                   1                    
+1                    1796        
+95          21          69                   2                    
+2                    2093        
+909         21          12                   1                    
+1                    206         
+1501        21          1                    43                   
+43                   0           
+2204        21          2                    69                   
+69                   1501        
+96          22          69                   1                    
+1                    2094        
+392         22          35                   2                    
+2                    2464        
+1502        22          1                    19                   
+19                   0           
+2205        22          2                    69                   
+69                   1502        
+97          23          70                   1                    
+1                    2169        
+393         23          36                   2                    
+2                    2465        
+800         23          1                    43                   
+43                   0           
+1503        23          2                    17                   
+17                   800         
+98          24          70                   1                    
+1                    2170        
+394         24          36                   2                    
+2                    2466        
+801         24          1                    43                   
+43                   0           
+1504        24          2                    14                   
+14                   801         
+99          25          70                   2                    
+2                    2171        
+802         25          1                    43                   
+43                   0           
+1209        25          49                   1                    
+1                    506         
+1505        25          2                    12                   
+12                   802         
+100         26          1                    70                   
+70                   0           
+396         26          37                   1                    
+1                    2468        
+692         26          66                   2                    
+2                    766         
+803         26          2                    42                   
+42                   100         
+101         27          1                    70                   
+70                   0           
+397         27          37                   1                    
+1                    2136        
+693         27          66                   2                    
+2                    767         
+804         27          2                    42                   
+42                   101         
+102         28          2                    69                   
+69                   2100        
+398         28          38                   1                    
+1                    2137        
+694         28          67                   2                    
+2                    768         
+2100        28          1                    70                   
+70                   0           
+103         29          1                    70                   
+70                   0           
+399         29          38                   2                    
+2                    2138        
+806         29          2                    42                   
+42                   103         
+1509        29          3                    1                    
+1                    806         
+120 rows selected.
+iSQL> SELECT CASE WHEN COUNT(*) = 2600 THEN 1 ELSE 0 END AS PASS_COUNT
+  FROM DST_COV_WN04;
+PASS_COUNT  
+--------------
+1           
+1 row selected.
+iSQL> DROP TABLE DST_COV_WN04;
+Drop success.

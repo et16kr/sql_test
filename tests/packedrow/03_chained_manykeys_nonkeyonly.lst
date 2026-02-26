@@ -1,0 +1,102 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify chained packed rows with many keys in non-key-only fetch path.
+iSQL> -- Checks: Row decode and aggregation remain correct under chained storage.
+iSQL> -- Disk sort temp coverage PR03: packed + chained + many key columns (>8)
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DST_COV_PR03
+(
+    ID       INTEGER,
+    K1       VARCHAR(64),
+    K2       VARCHAR(64),
+    K3       VARCHAR(64),
+    K4       VARCHAR(64),
+    K5       VARCHAR(64),
+    K6       VARCHAR(64),
+    K7       VARCHAR(64),
+    K8       VARCHAR(64),
+    K9       VARCHAR(64),
+    V1       VARCHAR(10000),
+    V2       VARCHAR(10000),
+    V3       VARCHAR(10000)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DST_COV_PR03
+SELECT LEVEL,
+       'K1_' || LPAD(TO_CHAR(MOD(LEVEL, 97)), 3, '0'),
+       'K2_' || LPAD(TO_CHAR(MOD(LEVEL, 89)), 3, '0'),
+       'K3_' || LPAD(TO_CHAR(MOD(LEVEL, 83)), 3, '0'),
+       'K4_' || LPAD(TO_CHAR(MOD(LEVEL, 79)), 3, '0'),
+       'K5_' || LPAD(TO_CHAR(MOD(LEVEL, 73)), 3, '0'),
+       'K6_' || LPAD(TO_CHAR(MOD(LEVEL, 71)), 3, '0'),
+       'K7_' || LPAD(TO_CHAR(MOD(LEVEL, 67)), 3, '0'),
+       'K8_' || LPAD(TO_CHAR(MOD(LEVEL, 61)), 3, '0'),
+       'K9_' || LPAD(TO_CHAR(MOD(LEVEL, 59)), 3, '0'),
+       RPAD('V1_' || TO_CHAR(LEVEL), 9000, 'X'),
+       RPAD('V2_' || TO_CHAR(MOD(LEVEL, 200)), 9000, 'Y'),
+       RPAD('V3_' || TO_CHAR(MOD(LEVEL, 50)), 9000, 'Z')
+  FROM DUAL
+CONNECT BY LEVEL <= 520;
+520 rows inserted.
+iSQL> SELECT /*+ TEMP_TBS_DISK */ ID, LENGTH(V1) AS L1
+  FROM DST_COV_PR03
+ ORDER BY K1, K2, K3, K4, K5, K6, K7, K8, K9, ID
+ LIMIT 40;
+ID          L1                   
+------------------------------------
+97          9000                 
+194         9000                 
+291         9000                 
+388         9000                 
+485         9000                 
+1           9000                 
+98          9000                 
+195         9000                 
+292         9000                 
+389         9000                 
+486         9000                 
+2           9000                 
+99          9000                 
+196         9000                 
+293         9000                 
+390         9000                 
+487         9000                 
+3           9000                 
+100         9000                 
+197         9000                 
+294         9000                 
+391         9000                 
+488         9000                 
+4           9000                 
+101         9000                 
+198         9000                 
+295         9000                 
+392         9000                 
+489         9000                 
+5           9000                 
+102         9000                 
+199         9000                 
+296         9000                 
+393         9000                 
+490         9000                 
+6           9000                 
+103         9000                 
+200         9000                 
+297         9000                 
+394         9000                 
+40 rows selected.
+iSQL> SELECT CASE WHEN COUNT(*) = 520 THEN 1 ELSE 0 END AS PASS_COUNT
+  FROM DST_COV_PR03;
+PASS_COUNT  
+--------------
+1           
+1 row selected.
+iSQL> DROP TABLE DST_COV_PR03;
+Drop success.

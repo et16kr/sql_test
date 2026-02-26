@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "${1:-}" != "-f" || -z "${2:-}" ]]; then
+  echo "usage: is -f <sqlfile>" >&2
+  exit 2
+fi
+sql_file="$2"
+if [[ ! -f "$sql_file" ]]; then
+  echo "sql not found: $sql_file" >&2
+  exit 2
+fi
+content="$(cat "$sql_file")"
+
+if grep -q -- "--CASE:ERROR" <<<"$content"; then
+  echo "simulated execution error" >&2
+  exit 1
+fi
+
+if grep -q -- "--CASE:FATAL_DISCONNECT" <<<"$content"; then
+  echo "ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = ${ALTIBASE_PORT_NO:-17730}"
+  echo "[ERR-50032 : Client unable to establish connection. (Failed to invoke the connect() system function, errno=111)]"
+  exit 1
+fi
+
+if grep -q -- "--CASE:ORDER" <<<"$content"; then
+  cat <<'OUT'
+ID VAL
+2 B
+1 A
+2 rows selected.
+OUT
+  exit 0
+fi
+
+if grep -q -- "--CASE:FAIL" <<<"$content"; then
+  cat <<'OUT'
+ID VAL
+1 A
+2 X
+2 rows selected.
+OUT
+  exit 0
+fi
+
+cat <<'OUT'
+ID VAL
+1 A
+2 B
+2 rows selected.
+OUT
+exit 0

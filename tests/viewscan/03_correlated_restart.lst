@@ -1,0 +1,86 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify correlated restart behavior in repeated view/subquery execution.
+iSQL> -- Checks: Repeated correlation evaluation returns stable, correct results.
+iSQL> -- Disk sort temp coverage VS03: correlated subquery over NO_MERGE view (restart path)
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DST_COV_VS03_BASE
+(
+    ID       INTEGER,
+    GRP_ID   INTEGER,
+    PAD1     VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DST_COV_VS03_BASE
+SELECT LEVEL,
+       MOD(LEVEL, 57),
+       RPAD('V' || TO_CHAR(MOD(LEVEL, 300)), 3200, 'V')
+  FROM DUAL
+CONNECT BY LEVEL <= 1600;
+1600 rows inserted.
+iSQL> SELECT A.ID,
+       (
+        SELECT /*+ TEMP_TBS_DISK NO_MERGE(V) */ COUNT(*)
+          FROM (
+                SELECT ID, GRP_ID, PAD1
+                  FROM DST_COV_VS03_BASE
+                 ORDER BY GRP_ID, ID
+               ) V
+         WHERE V.GRP_ID = A.GRP_ID
+           AND V.ID <= A.ID
+       ) AS IN_GRP_PREFIX_CNT
+  FROM DST_COV_VS03_BASE A
+ WHERE A.ID <= 40
+ ORDER BY A.ID;
+ID          IN_GRP_PREFIX_CNT    
+------------------------------------
+1           1                    
+2           1                    
+3           1                    
+4           1                    
+5           1                    
+6           1                    
+7           1                    
+8           1                    
+9           1                    
+10          1                    
+11          1                    
+12          1                    
+13          1                    
+14          1                    
+15          1                    
+16          1                    
+17          1                    
+18          1                    
+19          1                    
+20          1                    
+21          1                    
+22          1                    
+23          1                    
+24          1                    
+25          1                    
+26          1                    
+27          1                    
+28          1                    
+29          1                    
+30          1                    
+31          1                    
+32          1                    
+33          1                    
+34          1                    
+35          1                    
+36          1                    
+37          1                    
+38          1                    
+39          1                    
+40          1                    
+40 rows selected.
+iSQL> DROP TABLE DST_COV_VS03_BASE;
+Drop success.

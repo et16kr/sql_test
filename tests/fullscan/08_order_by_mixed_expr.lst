@@ -1,0 +1,110 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify ORDER BY on mixed expressions is evaluated and sorted correctly.
+iSQL> -- Checks: Expression-based ordering result is deterministic and valid.
+iSQL> -- Disk sort temp coverage FS08: mixed expression sort on packed-row candidate
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DST_COV_FS08
+(
+    ID       INTEGER,
+    GRP_ID   INTEGER,
+    K1       VARCHAR(64),
+    PAD1     VARCHAR(3200),
+    PAD2     VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DST_COV_FS08
+SELECT LEVEL,
+       MOD(LEVEL, 53),
+       'K' || LPAD(TO_CHAR(MOD(LEVEL, 900)), 4, '0'),
+       RPAD('A' || TO_CHAR(MOD(LEVEL, 301)), 3200, 'A'),
+       RPAD('B' || TO_CHAR(MOD(LEVEL, 211)), 3200, 'B')
+  FROM DUAL
+CONNECT BY LEVEL <= 2300;
+2300 rows inserted.
+iSQL> SELECT /*+ TEMP_TBS_DISK */ ID, GRP_ID
+  FROM DST_COV_FS08
+ ORDER BY MOD(GRP_ID, 7), LENGTH(PAD1) DESC, K1, ID DESC
+ LIMIT 70;
+ID          GRP_ID      
+---------------------------
+901         0           
+1802        0           
+7           7           
+908         7           
+1809        7           
+14          14          
+915         14          
+1816        14          
+21          21          
+922         21          
+1823        21          
+28          28          
+929         28          
+1830        28          
+35          35          
+936         35          
+1837        35          
+42          42          
+943         42          
+1844        42          
+49          49          
+950         49          
+1851        49          
+53          0           
+954         0           
+1855        0           
+60          7           
+961         7           
+1862        7           
+67          14          
+968         14          
+1869        14          
+74          21          
+975         21          
+1876        21          
+81          28          
+982         28          
+1883        28          
+88          35          
+989         35          
+1890        35          
+95          42          
+996         42          
+1897        42          
+102         49          
+1003        49          
+1904        49          
+106         0           
+1007        0           
+1908        0           
+113         7           
+1014        7           
+1915        7           
+120         14          
+1021        14          
+1922        14          
+127         21          
+1028        21          
+1929        21          
+134         28          
+1035        28          
+1936        28          
+141         35          
+1042        35          
+1943        35          
+148         42          
+1049        42          
+1950        42          
+155         49          
+1056        49          
+70 rows selected.
+iSQL> DROP TABLE DST_COV_FS08;
+Drop success.

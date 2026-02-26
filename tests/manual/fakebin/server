@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+set -euo pipefail
+state_dir="${ALTI_FAKE_STATE_DIR:-/tmp/altitest_fake_server_${USER}}"
+mkdir -p "$state_dir"
+pid_file="$state_dir/server.pid"
+port="${ALTIBASE_PORT_NO:-17730}"
+cmd="${1:-}"
+
+is_alive() {
+  local pid
+  if [[ ! -f "$pid_file" ]]; then
+    return 1
+  fi
+  pid="$(cat "$pid_file")"
+  kill -0 "$pid" 2>/dev/null
+}
+
+start_server() {
+  if is_alive; then
+    return 0
+  fi
+  python3 - "$port" <<'PY' >/dev/null 2>&1 &
+import signal
+import socket
+import sys
+
+port = int(sys.argv[1])
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+sock.bind(("127.0.0.1", port))
+sock.listen(16)
+running = True
+
+def handle(_signum, _frame):
+    global running
+    running = False
+
+signal.signal(signal.SIGTERM, handle)
+signal.signal(signal.SIGINT, handle)
+
+while running:
+    sock.settimeout(0.5)
+    try:
+        conn, _addr = sock.accept()
+        conn.close()
+    except Exception:
+        pass
+
+sock.close()
+PY
+  echo "$!" > "$pid_file"
+  sleep 0.1
+  if ! is_alive; then
+    echo "failed to start fake server" >&2
+    exit 1
+  fi
+}
+
+stop_server() {
+  if ! is_alive; then
+    rm -f "$pid_file"
+    return 0
+  fi
+  local pid
+  pid="$(cat "$pid_file")"
+  kill "$pid" >/dev/null 2>&1 || true
+  for _ in 1 2 3 4 5; do
+    if ! kill -0 "$pid" 2>/dev/null; then
+      break
+    fi
+    sleep 0.1
+  done
+  rm -f "$pid_file"
+}
+
+case "$cmd" in
+  start)
+    start_server
+    ;;
+  stop|kill)
+    stop_server
+    ;;
+  *)
+    echo "usage: server <start|stop|kill>" >&2
+    exit 2
+    ;;
+esac

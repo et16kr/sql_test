@@ -1,0 +1,55 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify FULL OUTER join behavior on sparse key overlap.
+iSQL> -- Checks: Sparse-match join output includes all required unmatched rows.
+iSQL> -- Disk sort temp coverage HN06: sparse FULL OUTER sort join
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DST_COV_HN06_A
+(
+    ID      INTEGER,
+    K1      INTEGER,
+    PAD1    VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> CREATE TABLE DST_COV_HN06_B
+(
+    ID      INTEGER,
+    K1      INTEGER,
+    PAD1    VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DST_COV_HN06_A
+SELECT LEVEL,
+       LEVEL * 3,
+       RPAD('FA' || TO_CHAR(LEVEL), 3200, 'F')
+  FROM DUAL
+CONNECT BY LEVEL <= 700;
+700 rows inserted.
+iSQL> INSERT INTO DST_COV_HN06_B
+SELECT LEVEL,
+       LEVEL * 5,
+       RPAD('FB' || TO_CHAR(LEVEL), 3200, 'G')
+  FROM DUAL
+CONNECT BY LEVEL <= 700;
+700 rows inserted.
+iSQL> SELECT /*+ TEMP_TBS_DISK USE_SORT(B, A) NO_USE_HASH(B) */
+       SUM(CASE WHEN A.K1 IS NULL THEN 1 ELSE 0 END) AS RIGHT_ONLY_CNT,
+       SUM(CASE WHEN B.K1 IS NULL THEN 1 ELSE 0 END) AS LEFT_ONLY_CNT,
+       COUNT(*) AS TOTAL_CNT
+  FROM DST_COV_HN06_A A FULL OUTER JOIN DST_COV_HN06_B B
+    ON A.K1 = B.K1;
+RIGHT_ONLY_CNT LEFT_ONLY_CNT TOTAL_CNT            
+------------------------------------------------------
+560         560         1260                 
+1 row selected.
+iSQL> DROP TABLE DST_COV_HN06_A;
+Drop success.
+iSQL> DROP TABLE DST_COV_HN06_B;
+Drop success.

@@ -1,0 +1,220 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify DISTINCT on expression output with ORDER BY uses correct dedup/sort behavior.
+iSQL> -- Checks: Expression distinctness and final ordering are both satisfied.
+iSQL> -- Disk sort temp coverage FS09: DISTINCT with expression ORDER BY
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DST_COV_FS09
+(
+    ID       INTEGER,
+    K1       VARCHAR(64),
+    K2       VARCHAR(64),
+    PAD1     VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DST_COV_FS09
+SELECT LEVEL,
+       'K' || TO_CHAR(MOD(LEVEL, 170)),
+       'Z' || TO_CHAR(MOD(LEVEL, 90)),
+       RPAD('C' || TO_CHAR(MOD(LEVEL, 50)), 3200, 'C')
+  FROM DUAL
+CONNECT BY LEVEL <= 2600;
+2600 rows inserted.
+iSQL> SELECT /*+ TEMP_TBS_DISK DISTINCT_SORT */ DISTINCT K1, SUBSTR(K2, 1, 2) AS K2S
+  FROM DST_COV_FS09
+ ORDER BY K1, K2S
+ LIMIT 90;
+K1                                                                
+--------------------------------------------------------------------
+K2S                                                               
+--------------------------------------------------------------------
+K0                                                                
+Z0                                                                
+K0                                                                
+Z1                                                                
+K0                                                                
+Z2                                                                
+K0                                                                
+Z3                                                                
+K0                                                                
+Z4                                                                
+K0                                                                
+Z5                                                                
+K0                                                                
+Z6                                                                
+K0                                                                
+Z7                                                                
+K0                                                                
+Z8                                                                
+K1                                                                
+Z1                                                                
+K1                                                                
+Z2                                                                
+K1                                                                
+Z3                                                                
+K1                                                                
+Z4                                                                
+K1                                                                
+Z5                                                                
+K1                                                                
+Z6                                                                
+K1                                                                
+Z7                                                                
+K1                                                                
+Z8                                                                
+K10                                                               
+Z0                                                                
+K10                                                               
+Z1                                                                
+K10                                                               
+Z2                                                                
+K10                                                               
+Z3                                                                
+K10                                                               
+Z4                                                                
+K10                                                               
+Z5                                                                
+K10                                                               
+Z6                                                                
+K10                                                               
+Z7                                                                
+K10                                                               
+Z8                                                                
+K100                                                              
+Z0                                                                
+K100                                                              
+Z1                                                                
+K100                                                              
+Z2                                                                
+K100                                                              
+Z3                                                                
+K100                                                              
+Z4                                                                
+K100                                                              
+Z5                                                                
+K100                                                              
+Z6                                                                
+K100                                                              
+Z7                                                                
+K100                                                              
+Z8                                                                
+K101                                                              
+Z1                                                                
+K101                                                              
+Z2                                                                
+K101                                                              
+Z3                                                                
+K101                                                              
+Z4                                                                
+K101                                                              
+Z5                                                                
+K101                                                              
+Z6                                                                
+K101                                                              
+Z7                                                                
+K101                                                              
+Z8                                                                
+K102                                                              
+Z1                                                                
+K102                                                              
+Z2                                                                
+K102                                                              
+Z3                                                                
+K102                                                              
+Z4                                                                
+K102                                                              
+Z5                                                                
+K102                                                              
+Z6                                                                
+K102                                                              
+Z7                                                                
+K102                                                              
+Z8                                                                
+K103                                                              
+Z1                                                                
+K103                                                              
+Z2                                                                
+K103                                                              
+Z3                                                                
+K103                                                              
+Z4                                                                
+K103                                                              
+Z5                                                                
+K103                                                              
+Z6                                                                
+K103                                                              
+Z7                                                                
+K103                                                              
+Z8                                                                
+K104                                                              
+Z1                                                                
+K104                                                              
+Z2                                                                
+K104                                                              
+Z3                                                                
+K104                                                              
+Z4                                                                
+K104                                                              
+Z5                                                                
+K104                                                              
+Z6                                                                
+K104                                                              
+Z7                                                                
+K104                                                              
+Z8                                                                
+K105                                                              
+Z1                                                                
+K105                                                              
+Z2                                                                
+K105                                                              
+Z3                                                                
+K105                                                              
+Z4                                                                
+K105                                                              
+Z5                                                                
+K105                                                              
+Z6                                                                
+K105                                                              
+Z7                                                                
+K105                                                              
+Z8                                                                
+K106                                                              
+Z1                                                                
+K106                                                              
+Z2                                                                
+K106                                                              
+Z3                                                                
+K106                                                              
+Z4                                                                
+K106                                                              
+Z5                                                                
+K106                                                              
+Z6                                                                
+K106                                                              
+Z7                                                                
+K106                                                              
+Z8                                                                
+K107                                                              
+Z1                                                                
+K107                                                              
+Z2                                                                
+K107                                                              
+Z3                                                                
+K107                                                              
+Z4                                                                
+K107                                                              
+Z5                                                                
+K107                                                              
+Z6                                                                
+K107                                                              
+Z7                                                                
+90 rows selected.
+iSQL> DROP TABLE DST_COV_FS09;
+Drop success.

@@ -1,0 +1,74 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify packed-row full outer hash join hit/no-hit semantics.
+iSQL> -- Checks: Matched and unmatched rows from both sides are preserved correctly.
+iSQL> -- Disk hash temp packed-row coverage H05: full outer hash join hit/nonhit
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DHASH_COV05_A
+(
+    ID       INTEGER,
+    K1       VARCHAR(64),
+    PAD1     VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> CREATE TABLE DHASH_COV05_B
+(
+    ID       INTEGER,
+    K1       VARCHAR(64),
+    PAD1     VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DHASH_COV05_A
+SELECT LEVEL,
+       'K' || LPAD(TO_CHAR(LEVEL), 4, '0'),
+       RPAD('A' || TO_CHAR(LEVEL), 3200, 'A')
+  FROM DUAL
+CONNECT BY LEVEL <= 700;
+700 rows inserted.
+iSQL> INSERT INTO DHASH_COV05_B
+SELECT LEVEL,
+       'K' || LPAD(TO_CHAR(LEVEL + 300), 4, '0'),
+       RPAD('B' || TO_CHAR(LEVEL), 3200, 'B')
+  FROM DUAL
+CONNECT BY LEVEL <= 700;
+700 rows inserted.
+iSQL> SELECT /*+ TEMP_TBS_DISK USE_HASH(B, A) */
+       SUM(CASE WHEN A.K1 IS NULL THEN 1 ELSE 0 END) AS RIGHT_ONLY_CNT,
+       SUM(CASE WHEN B.K1 IS NULL THEN 1 ELSE 0 END) AS LEFT_ONLY_CNT,
+       SUM(CASE WHEN A.K1 IS NOT NULL AND B.K1 IS NOT NULL THEN 1 ELSE 0 END) AS MATCH_CNT,
+       COUNT(*) AS TOTAL_CNT
+  FROM DHASH_COV05_A A FULL OUTER JOIN DHASH_COV05_B B
+    ON A.K1 = B.K1;
+RIGHT_ONLY_CNT LEFT_ONLY_CNT MATCH_CNT   TOTAL_CNT            
+-------------------------------------------------------------------
+300         300         400         1000                 
+1 row selected.
+iSQL> SELECT CASE WHEN RIGHT_ONLY_CNT = 300
+                 AND LEFT_ONLY_CNT = 300
+                 AND MATCH_CNT = 400
+                 AND TOTAL_CNT = 1000
+            THEN 1 ELSE 0 END AS PASS_OUTER
+  FROM (
+        SELECT /*+ TEMP_TBS_DISK USE_HASH(B, A) */
+               SUM(CASE WHEN A.K1 IS NULL THEN 1 ELSE 0 END) AS RIGHT_ONLY_CNT,
+               SUM(CASE WHEN B.K1 IS NULL THEN 1 ELSE 0 END) AS LEFT_ONLY_CNT,
+               SUM(CASE WHEN A.K1 IS NOT NULL AND B.K1 IS NOT NULL THEN 1 ELSE 0 END) AS MATCH_CNT,
+               COUNT(*) AS TOTAL_CNT
+          FROM DHASH_COV05_A A FULL OUTER JOIN DHASH_COV05_B B
+            ON A.K1 = B.K1
+       ) X;
+PASS_OUTER  
+--------------
+1           
+1 row selected.
+iSQL> DROP TABLE DHASH_COV05_A;
+Drop success.
+iSQL> DROP TABLE DHASH_COV05_B;
+Drop success.

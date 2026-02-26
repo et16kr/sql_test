@@ -1,0 +1,156 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify INTERSECT result correctness and ordering stability.
+iSQL> -- Checks: Intersection membership and output ordering are correct.
+iSQL> -- Disk sort temp coverage SO03: INTERSECT + ORDER BY
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DST_COV_SO03_A
+(
+    K1      INTEGER,
+    K2      VARCHAR(64),
+    PAD1    VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> CREATE TABLE DST_COV_SO03_B
+(
+    K1      INTEGER,
+    K2      VARCHAR(64),
+    PAD1    VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DST_COV_SO03_A
+SELECT MOD(LEVEL, 400),
+       'S' || TO_CHAR(MOD(LEVEL, 110)),
+       RPAD('IA' || TO_CHAR(LEVEL), 3200, 'I')
+  FROM DUAL
+CONNECT BY LEVEL <= 1800;
+1800 rows inserted.
+iSQL> INSERT INTO DST_COV_SO03_B
+SELECT MOD(LEVEL + 120, 400),
+       'S' || TO_CHAR(MOD(LEVEL, 110)),
+       RPAD('IB' || TO_CHAR(LEVEL), 3200, 'J')
+  FROM DUAL
+CONNECT BY LEVEL <= 1800;
+1800 rows inserted.
+iSQL> SELECT /*+ TEMP_TBS_DISK */ K1, K2
+  FROM (
+        SELECT K1, K2 FROM DST_COV_SO03_A
+        INTERSECT
+        SELECT K1, K2 FROM DST_COV_SO03_B
+       ) X
+ ORDER BY K1, K2
+ LIMIT 100;
+K1          K2                                                                
+---------------------------------------------------------------------------------
+0           S60                                                               
+1           S61                                                               
+2           S62                                                               
+3           S63                                                               
+4           S64                                                               
+5           S65                                                               
+6           S66                                                               
+7           S67                                                               
+8           S68                                                               
+9           S69                                                               
+10          S70                                                               
+11          S71                                                               
+12          S72                                                               
+13          S73                                                               
+14          S74                                                               
+15          S75                                                               
+16          S76                                                               
+17          S77                                                               
+18          S78                                                               
+19          S79                                                               
+20          S80                                                               
+21          S81                                                               
+22          S82                                                               
+23          S83                                                               
+24          S84                                                               
+25          S85                                                               
+26          S86                                                               
+27          S87                                                               
+28          S88                                                               
+29          S89                                                               
+30          S90                                                               
+31          S91                                                               
+32          S92                                                               
+33          S93                                                               
+34          S94                                                               
+35          S95                                                               
+36          S96                                                               
+37          S97                                                               
+38          S98                                                               
+39          S99                                                               
+40          S100                                                              
+41          S101                                                              
+42          S102                                                              
+43          S103                                                              
+44          S104                                                              
+45          S105                                                              
+46          S106                                                              
+47          S107                                                              
+48          S108                                                              
+49          S109                                                              
+50          S0                                                                
+51          S1                                                                
+52          S2                                                                
+53          S3                                                                
+54          S4                                                                
+55          S5                                                                
+56          S6                                                                
+57          S7                                                                
+58          S8                                                                
+59          S9                                                                
+60          S10                                                               
+61          S11                                                               
+62          S12                                                               
+63          S13                                                               
+64          S14                                                               
+65          S15                                                               
+66          S16                                                               
+67          S17                                                               
+68          S18                                                               
+69          S19                                                               
+70          S20                                                               
+71          S21                                                               
+72          S22                                                               
+73          S23                                                               
+74          S24                                                               
+75          S25                                                               
+76          S26                                                               
+77          S27                                                               
+78          S28                                                               
+79          S29                                                               
+80          S30                                                               
+81          S31                                                               
+82          S32                                                               
+83          S33                                                               
+84          S34                                                               
+85          S35                                                               
+86          S36                                                               
+87          S37                                                               
+88          S38                                                               
+89          S39                                                               
+90          S40                                                               
+91          S41                                                               
+92          S42                                                               
+93          S43                                                               
+94          S44                                                               
+95          S45                                                               
+96          S46                                                               
+97          S47                                                               
+98          S48                                                               
+99          S49                                                               
+100 rows selected.
+iSQL> DROP TABLE DST_COV_SO03_A;
+Drop success.
+iSQL> DROP TABLE DST_COV_SO03_B;
+Drop success.

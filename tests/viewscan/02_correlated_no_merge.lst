@@ -1,0 +1,85 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify correlated subquery with NO_MERGE executes correctly.
+iSQL> -- Checks: Correlation filtering and result set are correct.
+iSQL> -- Disk sort temp coverage 15: correlated subquery over NO_MERGE ordered inline view
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DST_COV15_BASE
+(
+    ID       INTEGER,
+    GRP_ID   INTEGER,
+    PAD1     VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DST_COV15_BASE
+SELECT LEVEL,
+       MOD(LEVEL, 47),
+       RPAD('R' || TO_CHAR(MOD(LEVEL, 200)), 3200, 'R')
+  FROM DUAL
+CONNECT BY LEVEL <= 1300;
+1300 rows inserted.
+iSQL> SELECT A.ID,
+       (
+        SELECT /*+ TEMP_TBS_DISK NO_MERGE(V2) */ MAX(V2.ID)
+          FROM (
+                SELECT ID, GRP_ID
+                  FROM DST_COV15_BASE
+                 ORDER BY GRP_ID, ID
+               ) V2
+         WHERE V2.GRP_ID = A.GRP_ID
+       ) AS GRP_MAX_ID
+  FROM DST_COV15_BASE A
+ WHERE A.ID <= 40
+ ORDER BY A.ID;
+ID          GRP_MAX_ID  
+---------------------------
+1           1270        
+2           1271        
+3           1272        
+4           1273        
+5           1274        
+6           1275        
+7           1276        
+8           1277        
+9           1278        
+10          1279        
+11          1280        
+12          1281        
+13          1282        
+14          1283        
+15          1284        
+16          1285        
+17          1286        
+18          1287        
+19          1288        
+20          1289        
+21          1290        
+22          1291        
+23          1292        
+24          1293        
+25          1294        
+26          1295        
+27          1296        
+28          1297        
+29          1298        
+30          1299        
+31          1300        
+32          1254        
+33          1255        
+34          1256        
+35          1257        
+36          1258        
+37          1259        
+38          1260        
+39          1261        
+40          1262        
+40 rows selected.
+iSQL> DROP TABLE DST_COV15_BASE;
+Drop success.

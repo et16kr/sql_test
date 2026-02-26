@@ -1,0 +1,6 @@
+--+SET_ENV ALTI_FAKE_MARK=ON;
+--+SYSTEM sh -c '[ "$ALTI_FAKE_MARK" = "ON" ]';
+--+UNSET_ENV ALTI_FAKE_MARK;
+--+SYSTEM sh -c '[ -z "$ALTI_FAKE_MARK" ]';
+--CASE:PASS
+SELECT 1;

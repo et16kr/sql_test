@@ -1,0 +1,133 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify ROW_NUMBER window ordering correctness after data updates.
+iSQL> -- Checks: Partition ordering and ranked output are correct.
+iSQL> -- Disk sort temp coverage 07: window row_number update path on disk sort temp
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DST_COV07
+(
+    ID       INTEGER,
+    GRP_ID   INTEGER,
+    V1       VARCHAR(3200),
+    V2       VARCHAR(3200),
+    V3       VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DST_COV07
+SELECT LEVEL,
+       MOD(LEVEL, 29),
+       RPAD('A' || TO_CHAR(LEVEL), 3200, 'A'),
+       RPAD('B' || TO_CHAR(MOD(LEVEL, 200)), 3200, 'B'),
+       RPAD('C' || TO_CHAR(MOD(LEVEL, 50)), 3200, 'C')
+  FROM DUAL
+CONNECT BY LEVEL <= 1800;
+1800 rows inserted.
+iSQL> SELECT ID, GRP_ID, RN
+  FROM (
+        SELECT /*+ TEMP_TBS_DISK */
+               ID,
+               GRP_ID,
+               ROW_NUMBER() OVER (PARTITION BY GRP_ID ORDER BY V2 DESC, ID) AS RN
+          FROM DST_COV07
+       ) W
+ WHERE RN <= 3
+ ORDER BY GRP_ID, RN, ID;
+ID          GRP_ID      RN                   
+-------------------------------------------------
+609         0           1                    
+899         0           2                    
+696         0           3                    
+697         1           1                    
+494         1           2                    
+291         1           3                    
+698         2           1                    
+495         2           2                    
+292         2           3                    
+409         3           1                    
+699         3           2                    
+496         3           3                    
+497         4           1                    
+294         4           2                    
+91          4           3                    
+498         5           1                    
+295         5           2                    
+92          5           3                    
+209         6           1                    
+499         6           2                    
+296         6           3                    
+297         7           1                    
+94          7           2                    
+1689        7           3                    
+298         8           1                    
+95          8           2                    
+1690        8           3                    
+9           9           1                    
+299         9           2                    
+96          9           3                    
+97          10          1                    
+1692        10          2                    
+1489        10          3                    
+98          11          1                    
+1693        11          2                    
+1490        11          3                    
+99          12          1                    
+1694        12          2                    
+1491        12          3                    
+1695        13          1                    
+1492        13          2                    
+1608        13          3                    
+1609        14          1                    
+1696        14          2                    
+1493        14          3                    
+1697        15          1                    
+1494        15          2                    
+1291        15          3                    
+1698        16          1                    
+1495        16          2                    
+1292        16          3                    
+1409        17          1                    
+1699        17          2                    
+1496        17          3                    
+1497        18          1                    
+1294        18          2                    
+1091        18          3                    
+1498        19          1                    
+1295        19          2                    
+1092        19          3                    
+1209        20          1                    
+1499        20          2                    
+1296        20          3                    
+1297        21          1                    
+1094        21          2                    
+891         21          3                    
+1298        22          1                    
+1095        22          2                    
+892         22          3                    
+1009        23          1                    
+1299        23          2                    
+1096        23          3                    
+1097        24          1                    
+894         24          2                    
+691         24          3                    
+1098        25          1                    
+895         25          2                    
+692         25          3                    
+809         26          1                    
+1099        26          2                    
+896         26          3                    
+897         27          1                    
+694         27          2                    
+491         27          3                    
+898         28          1                    
+695         28          2                    
+492         28          3                    
+87 rows selected.
+iSQL> DROP TABLE DST_COV07;
+Drop success.

@@ -1,0 +1,109 @@
+-- Test Purpose: Verify out-memory hash unique compare handles variable-length key collisions correctly.
+-- Checks: Prefix-similar but length-different keys are not wrongly merged.
+-- Disk hash temp packed-row coverage H13: out-memory unique compare with var-length keys
+-- Manual reference:
+--   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+--   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+
+--+SKIP BEGIN;
+DROP TABLE DHASH_COV13_VAR;
+DROP TABLE DHASH_COV13_MET;
+DROP TABLE DHASH_COV13_CFG;
+--+SKIP END;
+
+CREATE TABLE DHASH_COV13_CFG
+(
+    OLD_HASH_AREA    BIGINT
+) TABLESPACE SYS_TBS_DISK_DATA;
+
+INSERT INTO DHASH_COV13_CFG
+SELECT VALUE1
+  FROM V$PROPERTY
+ WHERE NAME = 'HASH_AREA_SIZE';
+
+ALTER SYSTEM SET HASH_AREA_SIZE = 3145728;
+
+CREATE TABLE DHASH_COV13_VAR
+(
+    ID       INTEGER,
+    K1       VARCHAR(3200),
+    PAD1     VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+
+CREATE TABLE DHASH_COV13_MET
+(
+    BASE_USED_TEMP_PAGE    BIGINT
+) TABLESPACE SYS_TBS_DISK_DATA;
+
+INSERT INTO DHASH_COV13_VAR
+SELECT LEVEL,
+       'PX' || LPAD(TO_CHAR(MOD(LEVEL, 1000)), 4, '0')
+             || RPAD('A',
+                     2200 + MOD(TRUNC((LEVEL - 1) / 1000), 5),
+                     'A'),
+       RPAD('W' || TO_CHAR(MOD(LEVEL, 5000)), 3200, 'W')
+  FROM DUAL
+CONNECT BY LEVEL <= 60000;
+
+INSERT INTO DHASH_COV13_MET
+SELECT VALUE
+  FROM X$TEMPINFO
+ WHERE NAME = 'TOTAL USED TEMP PAGE COUNT';
+
+SELECT /*+ TEMP_TBS_DISK DISTINCT_HASH */
+       COUNT(*) AS DISTINCT_CNT
+  FROM (
+        SELECT DISTINCT K1
+          FROM DHASH_COV13_VAR
+       ) D;
+
+SELECT CASE WHEN COUNT(*) = 5000 THEN 1 ELSE 0 END AS PASS_DISTINCT
+  FROM (
+        SELECT /*+ TEMP_TBS_DISK DISTINCT_HASH */ DISTINCT K1
+          FROM DHASH_COV13_VAR
+       ) D;
+
+SELECT CASE WHEN COUNT(*) = 5 THEN 1 ELSE 0 END AS PASS_LEN_VARIANTS
+  FROM (
+        SELECT DISTINCT LENGTH(K1) AS L1
+          FROM (
+                SELECT /*+ TEMP_TBS_DISK DISTINCT_HASH */ DISTINCT K1
+                  FROM DHASH_COV13_VAR
+               ) D
+       ) L;
+
+SELECT CASE
+           WHEN (
+                ( SELECT VALUE
+                    FROM X$TEMPINFO
+                   WHERE NAME = 'TOTAL USED TEMP PAGE COUNT' )
+                - ( SELECT BASE_USED_TEMP_PAGE
+                      FROM DHASH_COV13_MET )
+                ) > 256
+           THEN 1 ELSE 0
+       END AS PASS_OUTMEM_USED_TEMP
+  FROM DUAL;
+
+DECLARE
+    V_OLD_HASH_AREA BIGINT;
+    V_STMT          VARCHAR(200);
+BEGIN
+    SELECT OLD_HASH_AREA
+      INTO V_OLD_HASH_AREA
+      FROM DHASH_COV13_CFG;
+
+    V_STMT := 'ALTER SYSTEM SET HASH_AREA_SIZE = ' || V_OLD_HASH_AREA;
+    EXECUTE IMMEDIATE V_STMT;
+END;
+/
+
+SELECT CASE
+           WHEN VALUE1 = ( SELECT OLD_HASH_AREA FROM DHASH_COV13_CFG )
+           THEN 1 ELSE 0
+       END AS PASS_HASH_RESTORE
+  FROM V$PROPERTY
+ WHERE NAME = 'HASH_AREA_SIZE';
+
+DROP TABLE DHASH_COV13_MET;
+DROP TABLE DHASH_COV13_VAR;
+DROP TABLE DHASH_COV13_CFG;

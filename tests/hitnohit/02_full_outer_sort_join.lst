@@ -1,0 +1,55 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify FULL OUTER sort-join hit/no-hit row preservation.
+iSQL> -- Checks: Both-side unmatched rows are preserved with correct join results.
+iSQL> -- Disk sort temp coverage 13: FULL OUTER JOIN with sort join (hit + nonhit scan)
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DST_COV13_A
+(
+    ID     INTEGER,
+    K1     INTEGER,
+    PAD1   VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> CREATE TABLE DST_COV13_B
+(
+    ID     INTEGER,
+    K1     INTEGER,
+    PAD1   VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DST_COV13_A
+SELECT LEVEL,
+       LEVEL,
+       RPAD('FA' || TO_CHAR(LEVEL), 3200, 'F')
+  FROM DUAL
+CONNECT BY LEVEL <= 1000;
+1000 rows inserted.
+iSQL> INSERT INTO DST_COV13_B
+SELECT LEVEL,
+       LEVEL + 500,
+       RPAD('FB' || TO_CHAR(LEVEL), 3200, 'G')
+  FROM DUAL
+CONNECT BY LEVEL <= 1000;
+1000 rows inserted.
+iSQL> SELECT /*+ TEMP_TBS_DISK USE_SORT(B, A) NO_USE_HASH(B) */
+       SUM(CASE WHEN A.K1 IS NULL THEN 1 ELSE 0 END) AS RIGHT_ONLY_CNT,
+       SUM(CASE WHEN B.K1 IS NULL THEN 1 ELSE 0 END) AS LEFT_ONLY_CNT,
+       COUNT(*) AS TOTAL_CNT
+  FROM DST_COV13_A A FULL OUTER JOIN DST_COV13_B B
+    ON A.K1 = B.K1;
+RIGHT_ONLY_CNT LEFT_ONLY_CNT TOTAL_CNT            
+------------------------------------------------------
+500         500         1500                 
+1 row selected.
+iSQL> DROP TABLE DST_COV13_A;
+Drop success.
+iSQL> DROP TABLE DST_COV13_B;
+Drop success.

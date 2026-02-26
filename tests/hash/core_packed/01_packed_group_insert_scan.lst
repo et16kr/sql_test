@@ -1,0 +1,138 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify packed-row hash path for insert plus GROUP_HASH scan.
+iSQL> -- Checks: Grouped counts and max-length aggregates match inserted packed rows.
+iSQL> -- Disk hash temp packed-row coverage H01: packed insert + group scan
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DHASH_COV01
+(
+    ID       INTEGER,
+    K1       VARCHAR(256),
+    V1       VARCHAR(4000),
+    V2       VARCHAR(4000)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DHASH_COV01
+SELECT LEVEL,
+       'K' || LPAD(TO_CHAR(MOD(LEVEL, 173)), 4, '0'),
+       CASE WHEN MOD(LEVEL, 11) = 0 THEN NULL
+            WHEN MOD(LEVEL, 11) = 1 THEN 'S'
+            ELSE RPAD('V1_' || TO_CHAR(LEVEL), MOD(LEVEL * 13, 3900) + 50, 'A') END,
+       RPAD('V2_' || TO_CHAR(MOD(LEVEL, 300)), MOD(LEVEL * 17, 3900) + 60, 'B')
+  FROM DUAL
+CONNECT BY LEVEL <= 2600;
+2600 rows inserted.
+iSQL> SELECT /*+ TEMP_TBS_DISK GROUP_HASH */
+       K1,
+       COUNT(*) AS CNT,
+       MAX(NVL(LENGTH(V1), 0)) AS MAX_L1,
+       MAX(NVL(LENGTH(V2), 0)) AS MAX_L2
+  FROM DHASH_COV01
+ GROUP BY K1
+ ORDER BY K1
+ LIMIT 40;
+K1                                                                                                                                                                                                                                                                
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+CNT                  MAX_L1               MAX_L2               
+-------------------------------------------------------------------
+K0000                                                                                                                                                                                                                                                             
+15                   3638                 3193                 
+K0001                                                                                                                                                                                                                                                             
+16                   3651                 3210                 
+K0002                                                                                                                                                                                                                                                             
+16                   3664                 3227                 
+K0003                                                                                                                                                                                                                                                             
+16                   3534                 3244                 
+K0004                                                                                                                                                                                                                                                             
+16                   3092                 3261                 
+K0005                                                                                                                                                                                                                                                             
+16                   3703                 3278                 
+K0006                                                                                                                                                                                                                                                             
+15                   3716                 3295                 
+K0007                                                                                                                                                                                                                                                             
+15                   3729                 3312                 
+K0008                                                                                                                                                                                                                                                             
+15                   3742                 3329                 
+K0009                                                                                                                                                                                                                                                             
+15                   3755                 3346                 
+K0010                                                                                                                                                                                                                                                             
+15                   3768                 3363                 
+K0011                                                                                                                                                                                                                                                             
+15                   3781                 3380                 
+K0012                                                                                                                                                                                                                                                             
+15                   3794                 3397                 
+K0013                                                                                                                                                                                                                                                             
+15                   3807                 3414                 
+K0014                                                                                                                                                                                                                                                             
+15                   3677                 3431                 
+K0015                                                                                                                                                                                                                                                             
+15                   3235                 3448                 
+K0016                                                                                                                                                                                                                                                             
+15                   3846                 3465                 
+K0017                                                                                                                                                                                                                                                             
+15                   3859                 3482                 
+K0018                                                                                                                                                                                                                                                             
+15                   3872                 3499                 
+K0019                                                                                                                                                                                                                                                             
+15                   3885                 3516                 
+K0020                                                                                                                                                                                                                                                             
+15                   3898                 3533                 
+K0021                                                                                                                                                                                                                                                             
+15                   3911                 3550                 
+K0022                                                                                                                                                                                                                                                             
+15                   3924                 3567                 
+K0023                                                                                                                                                                                                                                                             
+15                   3937                 3584                 
+K0024                                                                                                                                                                                                                                                             
+15                   3807                 3601                 
+K0025                                                                                                                                                                                                                                                             
+15                   3820                 3618                 
+K0026                                                                                                                                                                                                                                                             
+15                   3378                 3635                 
+K0027                                                                                                                                                                                                                                                             
+15                   3391                 3652                 
+K0028                                                                                                                                                                                                                                                             
+15                   3859                 3669                 
+K0029                                                                                                                                                                                                                                                             
+15                   3872                 3686                 
+K0030                                                                                                                                                                                                                                                             
+15                   3885                 3703                 
+K0031                                                                                                                                                                                                                                                             
+15                   3898                 3720                 
+K0032                                                                                                                                                                                                                                                             
+15                   3911                 3737                 
+K0033                                                                                                                                                                                                                                                             
+15                   3924                 3754                 
+K0034                                                                                                                                                                                                                                                             
+15                   3937                 3771                 
+K0035                                                                                                                                                                                                                                                             
+15                   3495                 3788                 
+K0036                                                                                                                                                                                                                                                             
+15                   3508                 3805                 
+K0037                                                                                                                                                                                                                                                             
+15                   3521                 3822                 
+K0038                                                                                                                                                                                                                                                             
+15                   3534                 3839                 
+K0039                                                                                                                                                                                                                                                             
+15                   3547                 3856                 
+40 rows selected.
+iSQL> SELECT CASE WHEN SUM(CNT) = 2600 THEN 1 ELSE 0 END AS PASS_SUM
+  FROM (
+        SELECT /*+ TEMP_TBS_DISK GROUP_HASH */
+               COUNT(*) AS CNT
+          FROM DHASH_COV01
+         GROUP BY K1
+       ) X;
+PASS_SUM    
+--------------
+1           
+1 row selected.
+iSQL> DROP TABLE DHASH_COV01;
+Drop success.

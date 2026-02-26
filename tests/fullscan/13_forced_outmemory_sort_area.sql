@@ -1,0 +1,73 @@
+-- Test Purpose: Force out-memory sort path using small SORT_AREA_SIZE and verify behavior.
+-- Checks: Query results are correct and SORT_AREA_SIZE is restored to original value.
+-- Disk sort temp coverage FS13: force out-memory side with minimal SORT_AREA_SIZE
+-- Manual reference:
+--   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+--   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+
+--+SKIP BEGIN;
+DROP TABLE DST_COV_FS13;
+DROP TABLE DST_COV_FS13_CFG;
+--+SKIP END;
+
+CREATE TABLE DST_COV_FS13_CFG
+(
+    OLD_SORT_AREA    BIGINT
+) TABLESPACE SYS_TBS_DISK_DATA;
+
+INSERT INTO DST_COV_FS13_CFG
+SELECT VALUE1
+  FROM V$PROPERTY
+ WHERE NAME = 'SORT_AREA_SIZE';
+
+ALTER SYSTEM SET SORT_AREA_SIZE = 524288;
+
+CREATE TABLE DST_COV_FS13
+(
+    ID       INTEGER,
+    K1       VARCHAR(3200),
+    PAD1     VARCHAR(3200),
+    PAD2     VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+
+INSERT INTO DST_COV_FS13
+SELECT LEVEL,
+       'K' || LPAD(TO_CHAR(MOD(LEVEL, 10000)), 5, '0')
+           || RPAD('X', 2000 + MOD(LEVEL, 10), 'X'),
+       RPAD('P' || TO_CHAR(MOD(LEVEL, 4000)), 3200, 'P'),
+       RPAD('Q' || TO_CHAR(MOD(LEVEL, 3000)), 3200, 'Q')
+  FROM DUAL
+CONNECT BY LEVEL <= 40000;
+
+SELECT /*+ TEMP_TBS_DISK */
+       ID,
+       K1
+  FROM DST_COV_FS13
+ ORDER BY K1, PAD1, PAD2, ID
+ LIMIT 30;
+
+SELECT CASE WHEN COUNT(*) = 40000 THEN 1 ELSE 0 END AS PASS_COUNT
+  FROM DST_COV_FS13;
+
+DECLARE
+    V_OLD_SORT_AREA BIGINT;
+    V_STMT          VARCHAR(200);
+BEGIN
+    SELECT OLD_SORT_AREA
+      INTO V_OLD_SORT_AREA
+      FROM DST_COV_FS13_CFG;
+
+    V_STMT := 'ALTER SYSTEM SET SORT_AREA_SIZE = ' || V_OLD_SORT_AREA;
+    EXECUTE IMMEDIATE V_STMT;
+END;
+/
+
+SELECT CASE
+           WHEN VALUE1 = ( SELECT OLD_SORT_AREA FROM DST_COV_FS13_CFG )
+           THEN 1 ELSE 0
+       END AS PASS_SORT_RESTORE
+  FROM V$PROPERTY
+ WHERE NAME = 'SORT_AREA_SIZE';
+
+DROP TABLE DST_COV_FS13;
+DROP TABLE DST_COV_FS13_CFG;

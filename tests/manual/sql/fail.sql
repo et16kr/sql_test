@@ -1,0 +1,2 @@
+--CASE:FAIL
+SELECT 1;

@@ -1,0 +1,2 @@
+--CASE:ERROR
+SELECT broken;

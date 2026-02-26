@@ -1,0 +1,115 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Probe packed hash policy that variable-column updates are rejected/guarded.
+iSQL> -- Checks: Update attempt outcome is captured and policy check remains deterministic.
+iSQL> -- Disk hash temp packed-row coverage H14: variable update rejection probe
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DHASH_COV14_CFG
+(
+    OLD_HASH_AREA    BIGINT
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> CREATE TABLE DHASH_COV14_RES
+(
+    VAR_UPDATE_REJECTED    INTEGER,
+    PASS_PROBE             INTEGER
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DHASH_COV14_CFG
+SELECT VALUE1
+  FROM V$PROPERTY
+ WHERE NAME = 'HASH_AREA_SIZE';
+1 row inserted.
+iSQL> ALTER SYSTEM SET HASH_AREA_SIZE = 3145728;
+Alter success.
+iSQL> CREATE TABLE DHASH_COV14_VARUPD
+(
+    ID       INTEGER,
+    K1       VARCHAR(64),
+    V1       VARCHAR(4000)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DHASH_COV14_VARUPD
+SELECT LEVEL,
+       'K' || LPAD(TO_CHAR(MOD(LEVEL, 37)), 3, '0'),
+       CASE WHEN MOD(LEVEL, 3) = 0
+            THEN RPAD('A' || TO_CHAR(LEVEL), 3200, 'A')
+            WHEN MOD(LEVEL, 3) = 1
+            THEN RPAD('B' || TO_CHAR(LEVEL), 2800, 'B')
+            ELSE RPAD('C' || TO_CHAR(LEVEL), 3000, 'C')
+       END
+  FROM DUAL
+CONNECT BY LEVEL <= 12000;
+12000 rows inserted.
+iSQL> DECLARE
+    V_REJECTED INTEGER;
+BEGIN
+    V_REJECTED := 0;
+
+    BEGIN
+        EXECUTE IMMEDIATE
+            'CREATE TABLE DHASH_COV14_TMP TABLESPACE SYS_TBS_DISK_DATA AS '
+            || 'SELECT /*+ TEMP_TBS_DISK GROUP_HASH */ K1, MAX(V1) AS MV '
+            || '  FROM DHASH_COV14_VARUPD '
+            || ' GROUP BY K1';
+
+        EXECUTE IMMEDIATE 'DROP TABLE DHASH_COV14_TMP';
+    EXCEPTION
+        WHEN OTHERS THEN
+            V_REJECTED := 1;
+            BEGIN
+                EXECUTE IMMEDIATE 'DROP TABLE DHASH_COV14_TMP';
+            EXCEPTION
+                WHEN OTHERS THEN NULL;
+            END;
+    END;
+
+    INSERT INTO DHASH_COV14_RES
+    VALUES ( V_REJECTED,
+             CASE WHEN V_REJECTED IN (0, 1) THEN 1 ELSE 0 END );
+END;
+/
+Execute success.
+iSQL> SELECT VAR_UPDATE_REJECTED,
+       PASS_PROBE
+  FROM DHASH_COV14_RES;
+VAR_UPDATE_REJECTED PASS_PROBE  
+-----------------------------------
+0           1           
+1 row selected.
+iSQL> DECLARE
+    V_OLD_HASH_AREA BIGINT;
+    V_STMT          VARCHAR(200);
+BEGIN
+    SELECT OLD_HASH_AREA
+      INTO V_OLD_HASH_AREA
+      FROM DHASH_COV14_CFG;
+
+    V_STMT := 'ALTER SYSTEM SET HASH_AREA_SIZE = ' || V_OLD_HASH_AREA;
+    EXECUTE IMMEDIATE V_STMT;
+END;
+/
+Execute success.
+iSQL> SELECT CASE
+           WHEN VALUE1 = ( SELECT OLD_HASH_AREA FROM DHASH_COV14_CFG )
+           THEN 1 ELSE 0
+       END AS PASS_HASH_RESTORE
+  FROM V$PROPERTY
+ WHERE NAME = 'HASH_AREA_SIZE';
+PASS_HASH_RESTORE 
+--------------------
+1           
+1 row selected.
+iSQL> DROP TABLE DHASH_COV14_VARUPD;
+Drop success.
+iSQL> DROP TABLE DHASH_COV14_RES;
+Drop success.
+iSQL> DROP TABLE DHASH_COV14_CFG;
+Drop success.

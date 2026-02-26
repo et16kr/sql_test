@@ -1,0 +1,70 @@
+-- Test Purpose: Force in-memory sort path using large SORT_AREA_SIZE and verify behavior.
+-- Checks: Query results are correct and SORT_AREA_SIZE is restored to original value.
+-- Disk sort temp coverage FS12: force in-memory side with larger SORT_AREA_SIZE
+-- Manual reference:
+--   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+--   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+
+--+SKIP BEGIN;
+DROP TABLE DST_COV_FS12;
+DROP TABLE DST_COV_FS12_CFG;
+--+SKIP END;
+
+CREATE TABLE DST_COV_FS12_CFG
+(
+    OLD_SORT_AREA    BIGINT
+) TABLESPACE SYS_TBS_DISK_DATA;
+
+INSERT INTO DST_COV_FS12_CFG
+SELECT VALUE1
+  FROM V$PROPERTY
+ WHERE NAME = 'SORT_AREA_SIZE';
+
+ALTER SYSTEM SET SORT_AREA_SIZE = 67108864;
+
+CREATE TABLE DST_COV_FS12
+(
+    ID       INTEGER,
+    K1       VARCHAR(128),
+    PAD1     VARCHAR(512)
+) TABLESPACE SYS_TBS_DISK_DATA;
+
+INSERT INTO DST_COV_FS12
+SELECT LEVEL,
+       'K' || LPAD(TO_CHAR(MOD(LEVEL, 701)), 4, '0'),
+       RPAD('S' || TO_CHAR(MOD(LEVEL, 701)), 300, 'S')
+  FROM DUAL
+CONNECT BY LEVEL <= 4000;
+
+SELECT /*+ TEMP_TBS_DISK */
+       ID,
+       K1
+  FROM DST_COV_FS12
+ ORDER BY K1, ID
+ LIMIT 50;
+
+SELECT CASE WHEN COUNT(*) = 4000 THEN 1 ELSE 0 END AS PASS_COUNT
+  FROM DST_COV_FS12;
+
+DECLARE
+    V_OLD_SORT_AREA BIGINT;
+    V_STMT          VARCHAR(200);
+BEGIN
+    SELECT OLD_SORT_AREA
+      INTO V_OLD_SORT_AREA
+      FROM DST_COV_FS12_CFG;
+
+    V_STMT := 'ALTER SYSTEM SET SORT_AREA_SIZE = ' || V_OLD_SORT_AREA;
+    EXECUTE IMMEDIATE V_STMT;
+END;
+/
+
+SELECT CASE
+           WHEN VALUE1 = ( SELECT OLD_SORT_AREA FROM DST_COV_FS12_CFG )
+           THEN 1 ELSE 0
+       END AS PASS_SORT_RESTORE
+  FROM V$PROPERTY
+ WHERE NAME = 'SORT_AREA_SIZE';
+
+DROP TABLE DST_COV_FS12;
+DROP TABLE DST_COV_FS12_CFG;

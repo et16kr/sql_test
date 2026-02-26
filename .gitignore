@@ -1,0 +1,13 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Java build artifacts
+*.class
+
+# Local run artifacts
+out/
+
+# OS/editor noise
+.DS_Store

@@ -1,0 +1,60 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify chained packed-row decode correctness for wide rows.
+iSQL> -- Checks: Decoded variable-column lengths and values match inserted data.
+iSQL> -- Disk sort temp coverage 19: very wide chained row fetch/decode path
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DST_COV19
+(
+    ID       INTEGER,
+    K1       VARCHAR(64),
+    V1       VARCHAR(10000),
+    V2       VARCHAR(10000),
+    V3       VARCHAR(10000)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DST_COV19
+SELECT LEVEL,
+       'K' || TO_CHAR(MOD(LEVEL, 70)),
+       RPAD('P' || TO_CHAR(LEVEL), 9000, 'P'),
+       RPAD('Q' || TO_CHAR(MOD(LEVEL, 100)), 9000, 'Q'),
+       RPAD('R' || TO_CHAR(MOD(LEVEL, 10)), 9000, 'R')
+  FROM DUAL
+CONNECT BY LEVEL <= 320;
+320 rows inserted.
+iSQL> SELECT /*+ TEMP_TBS_DISK */ ID, LENGTH(V1) AS L1, LENGTH(V2) AS L2
+  FROM DST_COV19
+ ORDER BY K1, ID
+ LIMIT 20;
+ID          L1                   L2                   
+----------------------------------------------------------
+70          9000                 9000                 
+140         9000                 9000                 
+210         9000                 9000                 
+280         9000                 9000                 
+1           9000                 9000                 
+71          9000                 9000                 
+141         9000                 9000                 
+211         9000                 9000                 
+281         9000                 9000                 
+10          9000                 9000                 
+80          9000                 9000                 
+150         9000                 9000                 
+220         9000                 9000                 
+290         9000                 9000                 
+11          9000                 9000                 
+81          9000                 9000                 
+151         9000                 9000                 
+221         9000                 9000                 
+291         9000                 9000                 
+12          9000                 9000                 
+20 rows selected.
+iSQL> DROP TABLE DST_COV19;
+Drop success.

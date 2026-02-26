@@ -1,0 +1,2 @@
+--CASE:ORDER
+SELECT 1;

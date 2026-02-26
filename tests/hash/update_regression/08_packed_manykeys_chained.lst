@@ -1,0 +1,274 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify packed-row chained storage behavior with many hash keys.
+iSQL> -- Checks: Chained fetch/decode and distinct/group results are correct.
+iSQL> -- Disk hash temp packed-row coverage H08: many key columns + wide payload
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DHASH_COV08
+(
+    ID       INTEGER,
+    K1       VARCHAR(64),
+    K2       VARCHAR(64),
+    K3       VARCHAR(64),
+    K4       VARCHAR(64),
+    K5       VARCHAR(64),
+    K6       VARCHAR(64),
+    K7       VARCHAR(64),
+    K8       VARCHAR(64),
+    K9       VARCHAR(64),
+    V1       VARCHAR(4000),
+    V2       VARCHAR(4000)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DHASH_COV08
+SELECT LEVEL,
+       'K1_' || LPAD(TO_CHAR(MOD(TRUNC((LEVEL + 1) / 2), 97)), 3, '0'),
+       'K2_' || LPAD(TO_CHAR(MOD(TRUNC((LEVEL + 1) / 2), 89)), 3, '0'),
+       'K3_' || LPAD(TO_CHAR(MOD(TRUNC((LEVEL + 1) / 2), 83)), 3, '0'),
+       'K4_' || LPAD(TO_CHAR(MOD(TRUNC((LEVEL + 1) / 2), 79)), 3, '0'),
+       'K5_' || LPAD(TO_CHAR(MOD(TRUNC((LEVEL + 1) / 2), 73)), 3, '0'),
+       'K6_' || LPAD(TO_CHAR(MOD(TRUNC((LEVEL + 1) / 2), 71)), 3, '0'),
+       'K7_' || LPAD(TO_CHAR(MOD(TRUNC((LEVEL + 1) / 2), 67)), 3, '0'),
+       'K8_' || LPAD(TO_CHAR(MOD(TRUNC((LEVEL + 1) / 2), 61)), 3, '0'),
+       'K9_' || LPAD(TO_CHAR(MOD(TRUNC((LEVEL + 1) / 2), 59)), 3, '0'),
+       RPAD('V1_' || TO_CHAR(LEVEL), 3600, 'X'),
+       RPAD('V2_' || TO_CHAR(MOD(LEVEL, 700)), 3600, 'Y')
+  FROM DUAL
+CONNECT BY LEVEL <= 2400;
+2400 rows inserted.
+iSQL> SELECT /*+ TEMP_TBS_DISK DISTINCT_HASH */
+       COUNT(*) AS DISTINCT_CNT
+  FROM (
+        SELECT DISTINCT K1, K2, K3, K4, K5, K6, K7, K8, K9
+          FROM DHASH_COV08
+       ) D;
+DISTINCT_CNT         
+-----------------------
+1200                 
+1 row selected.
+iSQL> SELECT /*+ TEMP_TBS_DISK DISTINCT_HASH */
+       K1, K2, K3, K4, K5, K6, K7, K8, K9
+  FROM (
+        SELECT DISTINCT K1, K2, K3, K4, K5, K6, K7, K8, K9
+          FROM DHASH_COV08
+       ) D
+ ORDER BY K1, K2, K3, K4, K5, K6, K7, K8, K9
+ LIMIT 20;
+K1                                                                
+--------------------------------------------------------------------
+K2                                                                
+--------------------------------------------------------------------
+K3                                                                
+--------------------------------------------------------------------
+K4                                                                
+--------------------------------------------------------------------
+K5                                                                
+--------------------------------------------------------------------
+K6                                                                
+--------------------------------------------------------------------
+K7                                                                
+--------------------------------------------------------------------
+K8                                                                
+--------------------------------------------------------------------
+K9                                                                
+--------------------------------------------------------------------
+K1_000                                                            
+K2_007                                                            
+K3_002                                                            
+K4_058                                                            
+K5_069                                                            
+K6_028                                                            
+K7_025                                                            
+K8_005                                                            
+K9_043                                                            
+K1_000                                                            
+K2_008                                                            
+K3_014                                                            
+K4_018                                                            
+K5_024                                                            
+K6_026                                                            
+K7_030                                                            
+K8_036                                                            
+K9_038                                                            
+K1_000                                                            
+K2_016                                                            
+K3_028                                                            
+K4_036                                                            
+K5_048                                                            
+K6_052                                                            
+K7_060                                                            
+K8_011                                                            
+K9_017                                                            
+K1_000                                                            
+K2_024                                                            
+K3_042                                                            
+K4_054                                                            
+K5_072                                                            
+K6_007                                                            
+K7_023                                                            
+K8_047                                                            
+K9_055                                                            
+K1_000                                                            
+K2_032                                                            
+K3_056                                                            
+K4_072                                                            
+K5_023                                                            
+K6_033                                                            
+K7_053                                                            
+K8_022                                                            
+K9_034                                                            
+K1_000                                                            
+K2_040                                                            
+K3_070                                                            
+K4_011                                                            
+K5_047                                                            
+K6_059                                                            
+K7_016                                                            
+K8_058                                                            
+K9_013                                                            
+K1_000                                                            
+K2_048                                                            
+K3_001                                                            
+K4_029                                                            
+K5_071                                                            
+K6_014                                                            
+K7_046                                                            
+K8_033                                                            
+K9_051                                                            
+K1_000                                                            
+K2_056                                                            
+K3_015                                                            
+K4_047                                                            
+K5_022                                                            
+K6_040                                                            
+K7_009                                                            
+K8_008                                                            
+K9_030                                                            
+K1_000                                                            
+K2_064                                                            
+K3_029                                                            
+K4_065                                                            
+K5_046                                                            
+K6_066                                                            
+K7_039                                                            
+K8_044                                                            
+K9_009                                                            
+K1_000                                                            
+K2_072                                                            
+K3_043                                                            
+K4_004                                                            
+K5_070                                                            
+K6_021                                                            
+K7_002                                                            
+K8_019                                                            
+K9_047                                                            
+K1_000                                                            
+K2_080                                                            
+K3_057                                                            
+K4_022                                                            
+K5_021                                                            
+K6_047                                                            
+K7_032                                                            
+K8_055                                                            
+K9_026                                                            
+K1_000                                                            
+K2_088                                                            
+K3_071                                                            
+K4_040                                                            
+K5_045                                                            
+K6_002                                                            
+K7_062                                                            
+K8_030                                                            
+K9_005                                                            
+K1_001                                                            
+K2_000                                                            
+K3_072                                                            
+K4_041                                                            
+K5_046                                                            
+K6_003                                                            
+K7_063                                                            
+K8_031                                                            
+K9_006                                                            
+K1_001                                                            
+K2_001                                                            
+K3_001                                                            
+K4_001                                                            
+K5_001                                                            
+K6_001                                                            
+K7_001                                                            
+K8_001                                                            
+K9_001                                                            
+K1_001                                                            
+K2_008                                                            
+K3_003                                                            
+K4_059                                                            
+K5_070                                                            
+K6_029                                                            
+K7_026                                                            
+K8_006                                                            
+K9_044                                                            
+K1_001                                                            
+K2_009                                                            
+K3_015                                                            
+K4_019                                                            
+K5_025                                                            
+K6_027                                                            
+K7_031                                                            
+K8_037                                                            
+K9_039                                                            
+K1_001                                                            
+K2_017                                                            
+K3_029                                                            
+K4_037                                                            
+K5_049                                                            
+K6_053                                                            
+K7_061                                                            
+K8_012                                                            
+K9_018                                                            
+K1_001                                                            
+K2_025                                                            
+K3_043                                                            
+K4_055                                                            
+K5_000                                                            
+K6_008                                                            
+K7_024                                                            
+K8_048                                                            
+K9_056                                                            
+K1_001                                                            
+K2_033                                                            
+K3_057                                                            
+K4_073                                                            
+K5_024                                                            
+K6_034                                                            
+K7_054                                                            
+K8_023                                                            
+K9_035                                                            
+K1_001                                                            
+K2_041                                                            
+K3_071                                                            
+K4_012                                                            
+K5_048                                                            
+K6_060                                                            
+K7_017                                                            
+K8_059                                                            
+K9_014                                                            
+20 rows selected.
+iSQL> SELECT CASE WHEN COUNT(*) = 1200 THEN 1 ELSE 0 END AS PASS_MANYKEY_DISTINCT
+  FROM (
+        SELECT /*+ TEMP_TBS_DISK DISTINCT_HASH */
+               DISTINCT K1, K2, K3, K4, K5, K6, K7, K8, K9
+          FROM DHASH_COV08
+       ) D;
+PASS_MANYKEY_DISTINCT 
+------------------------
+1           
+1 row selected.
+iSQL> DROP TABLE DHASH_COV08;
+Drop success.

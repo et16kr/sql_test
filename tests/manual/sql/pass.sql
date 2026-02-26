@@ -1,0 +1,2 @@
+--CASE:PASS
+SELECT 1;

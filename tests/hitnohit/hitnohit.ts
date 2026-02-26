@@ -1,0 +1,6 @@
+01_left_outer_sort_join.sql
+02_full_outer_sort_join.sql
+03_fullouter_window_mix.sql
+04_right_outer_sort_join.sql
+05_left_outer_conditional.sql
+06_full_outer_sparse.sql

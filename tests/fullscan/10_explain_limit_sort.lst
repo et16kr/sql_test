@@ -1,0 +1,78 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Verify EXPLAIN PLAN ONLY flow does not affect subsequent LIMIT sort execution.
+iSQL> -- Checks: Explain-only stage succeeds and real execution still returns correct ordered rows.
+iSQL> -- Disk sort temp coverage FS10: explain-only + runtime limit-sort
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DST_COV_FS10
+(
+    ID       INTEGER,
+    SCORE    NUMERIC(12),
+    PAD1     VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DST_COV_FS10
+SELECT LEVEL,
+       MOD(LEVEL * 131, 100000),
+       RPAD('E' || TO_CHAR(MOD(LEVEL, 500)), 3200, 'E')
+  FROM DUAL
+CONNECT BY LEVEL <= 2400;
+2400 rows inserted.
+iSQL> ALTER SESSION SET EXPLAIN PLAN = ONLY;
+Alter success.
+iSQL> SELECT /*+ TEMP_TBS_DISK */ ID, SCORE
+  FROM DST_COV_FS10
+ ORDER BY SCORE DESC, ID
+ LIMIT 25;
+ID          SCORE       
+---------------------------
+No rows selected.
+------------------------------------------------------------
+PROJECT ( COLUMN_COUNT: 2, TUPLE_SIZE: 14, COST: 118.77 )
+ LIMIT-SORT ( ITEM_SIZE: ??, ITEM_COUNT: ??, STORE_COUNT: ??, ACCESS: ??, COST: 118.76 )
+  SCAN ( TABLE: SYS.DST_COV_FS10, FULL SCAN, ACCESS: ??, COST: 118.73 )
+------------------------------------------------------------
+
+iSQL> ALTER SESSION SET EXPLAIN PLAN = OFF;
+Alter success.
+iSQL> SELECT /*+ TEMP_TBS_DISK */ ID, SCORE
+  FROM DST_COV_FS10
+ ORDER BY SCORE DESC, ID
+ LIMIT 25;
+ID          SCORE       
+---------------------------
+2290        99990       
+763         99953       
+1526        99906       
+2289        99859       
+762         99822       
+1525        99775       
+2288        99728       
+761         99691       
+1524        99644       
+2287        99597       
+760         99560       
+1523        99513       
+2286        99466       
+759         99429       
+1522        99382       
+2285        99335       
+758         99298       
+1521        99251       
+2284        99204       
+757         99167       
+1520        99120       
+2283        99073       
+756         99036       
+1519        98989       
+2282        98942       
+25 rows selected.
+iSQL> DROP TABLE DST_COV_FS10;
+Drop success.
