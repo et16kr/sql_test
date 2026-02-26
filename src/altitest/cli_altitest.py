@@ -40,7 +40,7 @@ class RunnerContext:
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="altitest", description="Altibase SQL test runner")
-    p.add_argument("suite", help="suite ts file")
+    p.add_argument("suite", help="suite ts file or single sql file")
 
     p.add_argument(
         "--server-mode",
@@ -457,7 +457,7 @@ def _to_rel_path_safe(path: str, repo_root: str) -> str:
 
 def _build_ts_chain(ts_path: str, ts_parent_map_abs: Dict[str, str], repo_root: str) -> List[str]:
     if not ts_path:
-        return ["(unknown.ts)"]
+        return []
     cur = str(Path(ts_path).resolve())
     chain_abs: List[str] = []
     seen: set[str] = set()
@@ -467,7 +467,7 @@ def _build_ts_chain(ts_path: str, ts_parent_map_abs: Dict[str, str], repo_root: 
         cur = ts_parent_map_abs.get(cur, "")
     chain_abs.reverse()
     if not chain_abs:
-        return ["(unknown.ts)"]
+        return []
     return [_to_rel_path_safe(p, repo_root) for p in chain_abs]
 
 
@@ -497,12 +497,25 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     ctx = RunnerContext(options=opts, run_id=run_id, run_dir=run_dir, suite_abs=suite_abs)
 
-    sql_paths, parse_issues, ts_trace, sql_sources, ts_parent_map_abs = parse_suite(suite_abs, opts.repo_root)
+    target_path = Path(suite_abs)
+    if target_path.suffix.lower() == ".sql":
+        sql_paths = [str(target_path.resolve())]
+        parse_issues = []
+        ts_trace = []
+        sql_sources = [""]
+        ts_parent_map_abs: Dict[str, str] = {}
+    elif target_path.suffix.lower() == ".ts":
+        sql_paths, parse_issues, ts_trace, sql_sources, ts_parent_map_abs = parse_suite(suite_abs, opts.repo_root)
+    else:
+        print("input must be .ts or .sql", file=sys.stderr)
+        return 1
+
     ts_trace_rel = [_to_rel_path_safe(p, opts.repo_root) for p in ts_trace]
-    sql_owner_map_abs = {
-        str(Path(sql).resolve()): str(Path(owner).resolve())
-        for sql, owner in zip(sql_paths, sql_sources)
-    }
+    sql_owner_map_abs: Dict[str, str] = {}
+    for sql, owner in zip(sql_paths, sql_sources):
+        sql_key = str(Path(sql).resolve())
+        owner_abs = str(Path(owner).resolve()) if owner else ""
+        sql_owner_map_abs[sql_key] = owner_abs
     plans = build_case_plans(sql_paths, opts.repo_root, out_actual)
     plans = _filter_case_plans(plans, opts.case_filter)
 
