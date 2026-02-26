@@ -446,6 +446,31 @@ def _run_open_viewdiff(opts: RunOptions, run_json_path: str) -> None:
 
 
 
+def _to_rel_path_safe(path: str, repo_root: str) -> str:
+    if not path:
+        return ""
+    try:
+        return repo_relpath(path, repo_root)
+    except Exception:
+        return path
+
+
+def _build_ts_chain(ts_path: str, ts_parent_map_abs: Dict[str, str], repo_root: str) -> List[str]:
+    if not ts_path:
+        return ["(unknown.ts)"]
+    cur = str(Path(ts_path).resolve())
+    chain_abs: List[str] = []
+    seen: set[str] = set()
+    while cur and cur not in seen:
+        seen.add(cur)
+        chain_abs.append(cur)
+        cur = ts_parent_map_abs.get(cur, "")
+    chain_abs.reverse()
+    if not chain_abs:
+        return ["(unknown.ts)"]
+    return [_to_rel_path_safe(p, repo_root) for p in chain_abs]
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     opts = parse_options(argv)
 
@@ -472,7 +497,12 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     ctx = RunnerContext(options=opts, run_id=run_id, run_dir=run_dir, suite_abs=suite_abs)
 
-    sql_paths, parse_issues = parse_suite(suite_abs, opts.repo_root)
+    sql_paths, parse_issues, ts_trace, sql_sources, ts_parent_map_abs = parse_suite(suite_abs, opts.repo_root)
+    ts_trace_rel = [_to_rel_path_safe(p, opts.repo_root) for p in ts_trace]
+    sql_owner_map_abs = {
+        str(Path(sql).resolve()): str(Path(owner).resolve())
+        for sql, owner in zip(sql_paths, sql_sources)
+    }
     plans = build_case_plans(sql_paths, opts.repo_root, out_actual)
     plans = _filter_case_plans(plans, opts.case_filter)
 
@@ -480,11 +510,27 @@ def main(argv: Optional[List[str]] = None) -> int:
     stop_code = 0
     stopped_by_fatal = False
     stopped_case_index = 0
+    current_ts_chain: List[str] = []
 
     _run_pre_suite_actions(ctx)
 
     for plan in plans:
         _run_pre_case_actions(ctx)
+
+        owner_abs = sql_owner_map_abs.get(str(Path(plan.sql_path).resolve()), "")
+        owner_chain = _build_ts_chain(owner_abs, ts_parent_map_abs, opts.repo_root)
+        if owner_chain != current_ts_chain:
+            if current_ts_chain:
+                print("")
+            common = 0
+            for left, right in zip(current_ts_chain, owner_chain):
+                if left != right:
+                    break
+                common += 1
+            for depth in range(common, len(owner_chain)):
+                ts_rel = owner_chain[depth]
+                print(f"{'  ' * depth}{ts_rel}")
+            current_ts_chain = owner_chain
 
         case_result = _run_case(ctx, plan)
         case_result.sql = repo_relpath(case_result.sql, opts.repo_root)
@@ -493,7 +539,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         case_result.err = case_result.err
         results.append(case_result)
 
-        print(format_case_line(case_result.sql, case_result.status))
+        sql_indent = "  " * max(1, len(owner_chain))
+        print(f"{sql_indent}{format_case_line(case_result.sql, case_result.status)}")
 
         if case_result.status == config.STATUS_FATAL:
             stopped_by_fatal = True
@@ -535,6 +582,15 @@ def main(argv: Optional[List[str]] = None) -> int:
     run_state = {
         "stopped_by_fatal": bool(stopped_by_fatal),
         "stopped_case_index": int(stopped_case_index),
+        "suite_ts_trace": ts_trace_rel,
+        "suite_sql_sources": {
+            _to_rel_path_safe(sql, opts.repo_root): _to_rel_path_safe(owner, opts.repo_root)
+            for sql, owner in zip(sql_paths, sql_sources)
+        },
+        "suite_ts_parents": {
+            _to_rel_path_safe(child, opts.repo_root): _to_rel_path_safe(parent, opts.repo_root)
+            for child, parent in ts_parent_map_abs.items()
+        },
     }
 
     run_result = RunResult(

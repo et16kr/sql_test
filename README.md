@@ -66,6 +66,18 @@ tests/tests.ts
 ./bin/altitest tests/tests.ts
 ```
 
+실행 출력은 `.ts` 단위로 그룹화됩니다.
+상위 `.ts` 포함 관계까지 함께 출력되며, 마지막(leaf) `.ts` 아래 SQL 결과가 출력됩니다.
+
+```text
+tests/tests.ts
+  tests/all.ts
+    tests/hash/hash.ts
+      tests/hash/area_inout/area_inout.ts
+        tests/hash/area_inout/11_forced_inmemory_hash_area.sql ..... PASS
+        tests/hash/area_inout/12_forced_outmemory_hash_area.sql .... FAIL
+```
+
 자동화/에이전트 분석용 실행:
 
 ```bash
