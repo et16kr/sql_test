@@ -122,6 +122,28 @@ def open_result(item: Dict[str, object], diff_tool_override: str = "") -> Tuple[
 
 
 
+def show_missing_lst_out(item: Dict[str, object], max_chars: int = 200000) -> Tuple[bool, str]:
+    status = str(item.get("status", ""))
+    reason = str(item.get("reason", ""))
+    if not (status == config.STATUS_FAIL and reason == config.REASON_MISSING_LST):
+        return False, "show out is allowed for FAIL(missing_lst) only"
+
+    out_path = str(item.get("out", ""))
+    if not out_path:
+        return False, "missing_lst item has no out path"
+
+    out_file = Path(out_path)
+    if not out_file.exists():
+        return False, f"out file not found: {out_path}"
+
+    text = out_file.read_text(encoding="utf-8", errors="replace")
+    truncated = ""
+    if len(text) > max_chars:
+        text = text[:max_chars]
+        truncated = f"\n\n[truncated to first {max_chars} chars]"
+    return True, f"OUT FILE: {out_path}\n\n{text}{truncated}"
+
+
 def accept_out_to_lst(item: Dict[str, object], yes: bool = False) -> Tuple[bool, str]:
     status = str(item.get("status", ""))
     if status != config.STATUS_FAIL:

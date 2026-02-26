@@ -60,6 +60,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--order-check", default="auto", choices=["auto", "off"], help="ordering mismatch detection policy")
     p.add_argument("--order-is-pass", action="store_true", help="treat ORDER as pass for exit code")
     p.add_argument("--fatal-recover", action="store_true", help="recover on FATAL using clean -> server start")
+    p.add_argument("--continue-on-error", action="store_true", help="continue running after ERROR (default: stop on first ERROR)")
     p.add_argument(
         "--fatal-recover-max",
         type=int,
@@ -99,6 +100,7 @@ def parse_options(argv: Optional[List[str]] = None) -> RunOptions:
         order_is_pass=bool(args.order_is_pass),
         fatal_recover=bool(args.fatal_recover),
         fatal_recover_max=max(1, int(args.fatal_recover_max)),
+        continue_on_error=bool(args.continue_on_error),
         raw_diff=bool(args.raw_diff),
         accept_out=bool(args.accept_out),
         accept_missing_only=bool(args.accept_missing_only),
@@ -211,8 +213,12 @@ def _run_phase(
 
     phase_artifacts: Dict[str, str] = {}
     parse_result = parse_sql_file(phase_sql)
+    phase_timeout_sec = int(plan.timeout_sec_override or ctx.options.timeout_sec)
+    if parse_result.timeout_sec_override is not None:
+        phase_timeout_sec = int(parse_result.timeout_sec_override)
     if parse_result.issues:
         issue = parse_result.issues[0]
+        phase_artifacts["phase_error_detail"] = issue.detail
         return config.STATUS_ERROR, issue.reason, "", "", 1, phase_artifacts, False
 
     pre_path = str(Path(case_dir, f"{phase_name}.pre.sql"))
@@ -220,7 +226,7 @@ def _run_phase(
     if phase_name == "test":
         phase_artifacts["preprocessed_sql"] = pre_path
 
-    ok, system_result = run_system_actions(parse_result.actions, base_env=ctx.base_env, timeout_sec=ctx.options.timeout_sec)
+    ok, system_result = run_system_actions(parse_result.actions, base_env=ctx.base_env, timeout_sec=phase_timeout_sec)
     if not ok:
         if system_result.timed_out:
             return config.STATUS_ERROR, config.REASON_TIMEOUT, system_result.stdout, system_result.stderr, system_result.returncode, phase_artifacts, False
@@ -236,7 +242,7 @@ def _run_phase(
             )
         return config.STATUS_ERROR, config.REASON_EXEC_FAILED, system_result.stdout, system_result.stderr, system_result.returncode, phase_artifacts, False
 
-    res = execute_is(pre_path, timeout_sec=ctx.options.timeout_sec, env=ctx.base_env)
+    res = execute_is(pre_path, timeout_sec=phase_timeout_sec, env=ctx.base_env)
     phase_stdout_path = str(Path(case_dir, f"{phase_name}.stdout"))
     phase_stderr_path = str(Path(case_dir, f"{phase_name}.stderr"))
     write_text(phase_stdout_path, res.stdout)
@@ -289,12 +295,19 @@ def _run_case(ctx: RunnerContext, plan: CasePlan) -> CaseResult:
     test_phase = next((p for p in plan.phases if p.name == "test"), None)
     destroy_phase = next((p for p in plan.phases if p.name == "destroy"), None)
 
+    def _phase_hint(phase: str, st: str, rs: str, arts: Dict[str, str]) -> str:
+        detail = arts.get("phase_error_detail", "").strip()
+        base = f"{st}: {rs} at {phase} phase"
+        if detail:
+            return f"{base} ({detail})"
+        return base
+
     if init_phase is not None:
         st, rs, _, _, code, arts, _ = _run_phase(ctx, plan, "init", init_phase.sql_path, case_dir)
         artifacts.update(arts)
         if st in {config.STATUS_ERROR, config.STATUS_FATAL}:
             status, reason = _apply_status(status, reason, st, rs)
-            analysis_hint = f"{st}: {rs} at init phase"
+            analysis_hint = _phase_hint("init", st, rs, arts)
             exit_code = code
 
     if status not in {config.STATUS_ERROR, config.STATUS_FATAL} and test_phase is not None:
@@ -304,7 +317,7 @@ def _run_case(ctx: RunnerContext, plan: CasePlan) -> CaseResult:
 
         if st in {config.STATUS_ERROR, config.STATUS_FATAL}:
             status, reason = _apply_status(status, reason, st, rs)
-            analysis_hint = f"{st}: {rs} at test phase"
+            analysis_hint = _phase_hint("test", st, rs, arts)
             exit_code = code
         else:
             lst_exists = Path(plan.lst_path).exists()
@@ -325,7 +338,7 @@ def _run_case(ctx: RunnerContext, plan: CasePlan) -> CaseResult:
         artifacts.update(arts)
         if st in {config.STATUS_ERROR, config.STATUS_FATAL}:
             status, reason = _apply_status(status, reason, st, rs)
-            analysis_hint = f"{st}: {rs} at destroy phase"
+            analysis_hint = _phase_hint("destroy", st, rs, arts)
             exit_code = code
 
     duration_ms = int((time.monotonic() - start) * 1000)
@@ -504,8 +517,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         ts_trace = []
         sql_sources = [""]
         ts_parent_map_abs: Dict[str, str] = {}
+        sql_timeout_map_abs: Dict[str, int] = {}
     elif target_path.suffix.lower() == ".ts":
-        sql_paths, parse_issues, ts_trace, sql_sources, ts_parent_map_abs = parse_suite(suite_abs, opts.repo_root)
+        sql_paths, parse_issues, ts_trace, sql_sources, ts_parent_map_abs, sql_timeout_map_abs = parse_suite(
+            suite_abs, opts.repo_root
+        )
     else:
         print("input must be .ts or .sql", file=sys.stderr)
         return 1
@@ -516,12 +532,13 @@ def main(argv: Optional[List[str]] = None) -> int:
         sql_key = str(Path(sql).resolve())
         owner_abs = str(Path(owner).resolve()) if owner else ""
         sql_owner_map_abs[sql_key] = owner_abs
-    plans = build_case_plans(sql_paths, opts.repo_root, out_actual)
+    plans = build_case_plans(sql_paths, opts.repo_root, out_actual, sql_timeout_map=sql_timeout_map_abs)
     plans = _filter_case_plans(plans, opts.case_filter)
 
     results: List[CaseResult] = []
     stop_code = 0
     stopped_by_fatal = False
+    stopped_by_error = False
     stopped_case_index = 0
     current_ts_chain: List[str] = []
 
@@ -554,6 +571,14 @@ def main(argv: Optional[List[str]] = None) -> int:
 
         sql_indent = "  " * len(owner_chain)
         print(f"{sql_indent}{format_case_line(case_result.sql, case_result.status)}")
+        if case_result.status in {config.STATUS_ERROR, config.STATUS_FATAL} and case_result.analysis_hint:
+            print(f"{sql_indent}  -> {case_result.analysis_hint}")
+
+        if case_result.status == config.STATUS_ERROR and not opts.continue_on_error:
+            stopped_by_error = True
+            stopped_case_index = case_result.index
+            stop_code = 1
+            break
 
         if case_result.status == config.STATUS_FATAL:
             stopped_by_fatal = True
@@ -594,11 +619,16 @@ def main(argv: Optional[List[str]] = None) -> int:
     summary = summarize(results, total=len(plans) + len(parse_issues))
     run_state = {
         "stopped_by_fatal": bool(stopped_by_fatal),
+        "stopped_by_error": bool(stopped_by_error),
         "stopped_case_index": int(stopped_case_index),
         "suite_ts_trace": ts_trace_rel,
         "suite_sql_sources": {
             _to_rel_path_safe(sql, opts.repo_root): _to_rel_path_safe(owner, opts.repo_root)
             for sql, owner in zip(sql_paths, sql_sources)
+        },
+        "suite_sql_timeouts": {
+            _to_rel_path_safe(sql, opts.repo_root): timeout
+            for sql, timeout in sql_timeout_map_abs.items()
         },
         "suite_ts_parents": {
             _to_rel_path_safe(child, opts.repo_root): _to_rel_path_safe(parent, opts.repo_root)
@@ -622,6 +652,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             "diff_tool": opts.diff_tool,
             "order_check": opts.order_check,
             "order_is_pass": opts.order_is_pass,
+            "continue_on_error": opts.continue_on_error,
             "raw_diff": opts.raw_diff,
             "accept_out": opts.accept_out,
             "accept_missing_only": opts.accept_missing_only,

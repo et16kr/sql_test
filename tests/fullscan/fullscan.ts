@@ -11,3 +11,6 @@
 11_no_key_spill_scan.sql
 12_forced_inmemory_sort_area.sql
 13_forced_outmemory_sort_area.sql
+14_groupby_repro_mode_compare.sql
+15_temp_row_mode2_compact_payload.sql
+16_temp_row_mode2_wide_payload.sql | timeout_sec=600

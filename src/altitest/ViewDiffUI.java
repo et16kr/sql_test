@@ -3,10 +3,34 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ViewDiffUI {
+    private static class RowInfo {
+        final int index;
+        final String status;
+        final String reason;
+        final String sql;
+        final String lst;
+        final String out;
+        final String err;
+
+        RowInfo(int index, String status, String reason, String sql, String lst, String out, String err) {
+            this.index = index;
+            this.status = status;
+            this.reason = reason;
+            this.sql = sql;
+            this.lst = lst;
+            this.out = out;
+            this.err = err;
+        }
+    }
+
     private final String pythonExe;
     private final String viewdiffScript;
     private final String runJson;
@@ -17,7 +41,9 @@ public class ViewDiffUI {
     private DefaultTableModel model;
     private JTextArea logArea;
     private JButton openButton;
+    private JButton viewOutButton;
     private JButton acceptButton;
+    private final Map<Integer, RowInfo> rowsByIndex = new HashMap<>();
 
     public ViewDiffUI(String pythonExe, String viewdiffScript, String runJson, String diffTool) {
         this.pythonExe = pythonExe;
@@ -68,14 +94,17 @@ public class ViewDiffUI {
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         openButton = new JButton("Open Diff");
+        viewOutButton = new JButton("View OUT");
         acceptButton = new JButton("Accept OUT -> LST");
         JButton refreshButton = new JButton("Refresh");
 
         openButton.addActionListener(e -> openSelected());
+        viewOutButton.addActionListener(e -> viewOutSelected());
         acceptButton.addActionListener(e -> acceptSelected());
         refreshButton.addActionListener(e -> refreshList());
 
         buttonPanel.add(openButton);
+        buttonPanel.add(viewOutButton);
         buttonPanel.add(acceptButton);
         buttonPanel.add(refreshButton);
 
@@ -94,19 +123,21 @@ public class ViewDiffUI {
     }
 
     private void updateButtons() {
-        int row = table.getSelectedRow();
-        if (row < 0) {
+        RowInfo info = selectedRowInfo();
+        if (info == null) {
             openButton.setEnabled(false);
+            viewOutButton.setEnabled(false);
             acceptButton.setEnabled(false);
             return;
         }
-        String status = String.valueOf(model.getValueAt(row, 1));
         openButton.setEnabled(true);
-        acceptButton.setEnabled("FAIL".equals(status));
+        viewOutButton.setEnabled(info.out != null && !info.out.isEmpty());
+        acceptButton.setEnabled("FAIL".equals(info.status));
     }
 
     private void refreshList() {
         model.setRowCount(0);
+        rowsByIndex.clear();
         List<String> lines = runCommand(buildBaseCommand("--list-lines"));
         for (String line : lines) {
             if (line.trim().isEmpty()) {
@@ -117,6 +148,15 @@ public class ViewDiffUI {
                 continue;
             }
             model.addRow(new Object[]{parts[0], parts[1], parts[2], parts[3]});
+            try {
+                int idx = Integer.parseInt(parts[0].trim());
+                String lst = parts.length >= 5 ? parts[4] : "";
+                String out = parts.length >= 6 ? parts[5] : "";
+                String err = parts.length >= 7 ? parts[6] : "";
+                rowsByIndex.put(idx, new RowInfo(idx, parts[1], parts[2], parts[3], lst, out, err));
+            } catch (NumberFormatException ignored) {
+                // keep table row; row map is optional for malformed index lines
+            }
         }
         appendLog("list refreshed: " + model.getRowCount() + " rows");
         updateButtons();
@@ -129,6 +169,18 @@ public class ViewDiffUI {
         }
         List<String> out = runCommand(buildBaseCommand("--open-index", String.valueOf(idx)));
         appendLog(joinLines(out));
+    }
+
+    private void viewOutSelected() {
+        RowInfo info = selectedRowInfo();
+        if (info == null) {
+            return;
+        }
+        if (info.out == null || info.out.isEmpty()) {
+            appendLog("selected row has no out path");
+            return;
+        }
+        openOutWindow(info);
     }
 
     private void acceptSelected() {
@@ -171,6 +223,85 @@ public class ViewDiffUI {
         } catch (Exception e) {
             appendLog("invalid index in table");
             return null;
+        }
+    }
+
+    private RowInfo selectedRowInfo() {
+        Integer idx = selectedIndex();
+        if (idx == null) {
+            return null;
+        }
+        return rowsByIndex.get(idx);
+    }
+
+    private void openOutWindow(RowInfo info) {
+        JFrame outFrame = new JFrame("OUT [" + info.index + "] " + info.sql);
+        outFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        outFrame.setSize(1200, 800);
+        outFrame.setLocationRelativeTo(frame);
+        outFrame.setResizable(true);
+        outFrame.setLayout(new BorderLayout());
+
+        JLabel pathLabel = new JLabel("OUT: " + info.out);
+        pathLabel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        outFrame.add(pathLabel, BorderLayout.NORTH);
+
+        JTextArea outArea = new JTextArea();
+        outArea.setEditable(false);
+        outArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        outArea.setText(readOutFile(info.out));
+        outArea.setCaretPosition(0);
+
+        JScrollPane scroll = new JScrollPane(outArea);
+        outFrame.add(scroll, BorderLayout.CENTER);
+
+        JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JButton reloadButton = new JButton("Reload");
+        JButton acceptInWindowButton = new JButton("Accept OUT -> LST");
+        JButton closeButton = new JButton("Close");
+
+        reloadButton.addActionListener(e -> {
+            outArea.setText(readOutFile(info.out));
+            outArea.setCaretPosition(0);
+        });
+        acceptInWindowButton.setEnabled("FAIL".equals(info.status));
+        acceptInWindowButton.addActionListener(e -> {
+            int confirm = JOptionPane.showConfirmDialog(
+                    outFrame,
+                    "Selected FAIL case를 OUT -> LST로 덮어쓸까요?",
+                    "Confirm Accept",
+                    JOptionPane.YES_NO_OPTION
+            );
+            if (confirm != JOptionPane.YES_OPTION) {
+                return;
+            }
+            List<String> out = runCommand(buildBaseCommand("--accept-index", String.valueOf(info.index), "--yes"));
+            appendLog(joinLines(out));
+            refreshList();
+        });
+        closeButton.addActionListener(e -> outFrame.dispose());
+
+        controls.add(reloadButton);
+        controls.add(acceptInWindowButton);
+        controls.add(closeButton);
+        outFrame.add(controls, BorderLayout.SOUTH);
+
+        outFrame.setVisible(true);
+    }
+
+    private String readOutFile(String outPath) {
+        if (outPath == null || outPath.isEmpty()) {
+            return "out path is empty";
+        }
+        File f = new File(outPath);
+        if (!f.exists()) {
+            return "out file not found: " + outPath;
+        }
+        try {
+            byte[] bytes = Files.readAllBytes(f.toPath());
+            return new String(bytes, StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return "failed to read out file: " + e.getMessage();
         }
     }
 

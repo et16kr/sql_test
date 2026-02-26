@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import List
+from typing import Dict, List, Optional
 
 from .model import CasePlan, PhasePlan
 from .utils import repo_relpath
@@ -16,10 +16,17 @@ def _to_out_path(sql_path: str, repo_root: str, out_actual_dir: str, ext: str) -
     return str(Path(out_actual_dir, rel_no_ext + ext))
 
 
-def build_case_plans(sql_paths: List[str], repo_root: str, out_actual_dir: str) -> List[CasePlan]:
+def build_case_plans(
+    sql_paths: List[str],
+    repo_root: str,
+    out_actual_dir: str,
+    sql_timeout_map: Optional[Dict[str, int]] = None,
+) -> List[CasePlan]:
     plans: List[CasePlan] = []
+    timeout_map = sql_timeout_map or {}
     for idx, sql_path in enumerate(sql_paths, start=1):
         sql_path = str(Path(sql_path).resolve())
+        timeout_override = timeout_map.get(sql_path)
         base = os.path.basename(sql_path)
         parent = os.path.dirname(sql_path)
         if base == "test.sql":
@@ -51,6 +58,7 @@ def build_case_plans(sql_paths: List[str], repo_root: str, out_actual_dir: str) 
                 sql_path=sql_path,
                 mode=mode,
                 phases=phases,
+                timeout_sec_override=timeout_override,
                 init_sql=init_sql,
                 test_sql=test_sql,
                 destroy_sql=destroy_sql,
@@ -61,4 +69,3 @@ def build_case_plans(sql_paths: List[str], repo_root: str, out_actual_dir: str) 
         )
 
     return plans
-

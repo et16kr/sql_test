@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from .config import REASON_PARSE_ERROR, REASON_UNKNOWN_DIRECTIVE
 from .model import ParseIssue
@@ -21,6 +21,7 @@ class DirectiveAction:
 class ParseResult:
     preprocessed_sql: str
     actions: List[DirectiveAction]
+    timeout_sec_override: Optional[int]
     issues: List[ParseIssue]
 
 
@@ -44,6 +45,7 @@ def parse_sql_file(sql_path: str) -> ParseResult:
     env_map: Dict[str, str] = {}
     pre_lines: List[str] = []
     in_skip = False
+    timeout_sec_override: Optional[int] = None
 
     path = str(Path(sql_path).resolve())
     try:
@@ -53,6 +55,7 @@ def parse_sql_file(sql_path: str) -> ParseResult:
         return ParseResult(
             preprocessed_sql="",
             actions=[],
+            timeout_sec_override=None,
             issues=[ParseIssue(path=path, reason=REASON_PARSE_ERROR, detail=f"failed to read sql: {e}")],
         )
 
@@ -92,6 +95,21 @@ def parse_sql_file(sql_path: str) -> ParseResult:
                 else:
                     env_map.pop(key, None)
 
+            elif body_upper.startswith("TIMEOUT_SEC "):
+                if not body.endswith(";"):
+                    issues.append(ParseIssue(path=path, reason=REASON_PARSE_ERROR, detail=f"line {lineno}: TIMEOUT_SEC must end with ';'"))
+                    continue
+                payload = body[len("TIMEOUT_SEC ") : -1].strip()
+                try:
+                    parsed = int(payload)
+                except ValueError:
+                    issues.append(ParseIssue(path=path, reason=REASON_PARSE_ERROR, detail=f"line {lineno}: TIMEOUT_SEC must be integer -> {payload}"))
+                    continue
+                if parsed <= 0:
+                    issues.append(ParseIssue(path=path, reason=REASON_PARSE_ERROR, detail=f"line {lineno}: TIMEOUT_SEC must be > 0 -> {payload}"))
+                    continue
+                timeout_sec_override = parsed
+
             elif body_upper == "SKIP BEGIN;":
                 if in_skip:
                     issues.append(ParseIssue(path=path, reason=REASON_PARSE_ERROR, detail=f"line {lineno}: nested SKIP BEGIN not supported"))
@@ -115,5 +133,9 @@ def parse_sql_file(sql_path: str) -> ParseResult:
     if in_skip:
         issues.append(ParseIssue(path=path, reason=REASON_PARSE_ERROR, detail="SKIP BEGIN without matching SKIP END"))
 
-    return ParseResult(preprocessed_sql="".join(pre_lines), actions=actions, issues=issues)
-
+    return ParseResult(
+        preprocessed_sql="".join(pre_lines),
+        actions=actions,
+        timeout_sec_override=timeout_sec_override,
+        issues=issues,
+    )

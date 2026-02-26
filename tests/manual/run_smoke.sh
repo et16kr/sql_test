@@ -46,7 +46,7 @@ LST
 
 echo "[1/6] basic suite (PASS/ORDER/FAIL/ERROR)"
 reset_basic_fixtures
-run_expect 1 ./bin/altitest tests/manual/suites/basic.ts --non-interactive --ai-report
+run_expect 1 ./bin/altitest tests/manual/suites/basic.ts --continue-on-error --non-interactive --ai-report
 assert_json "
 summary = obj['summary']
 assert summary['pass'] == 5, summary

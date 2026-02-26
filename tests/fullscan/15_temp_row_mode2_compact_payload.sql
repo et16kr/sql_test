@@ -1,0 +1,358 @@
+    --+SET_ENV ALTIBASE_SYS_TEMP_FILE_INIT_SIZE=1048576;
+    --+SYSTEM clean;
+    --+SYSTEM server start;
+
+    create tablespace TBS1 datafile 'tbs1.dbf' size 1M autoextend on maxsize 1G;
+
+    CREATE TABLE T1
+    (
+    BDST_TYPE_SE_CD             VARCHAR(5),
+    MNG_BDST_UNQ_NO             VARCHAR(33),
+    BDST_SE_CD                  VARCHAR(5),
+    LDGR_KND_CD                 VARCHAR(5),
+    SGG_CD                      VARCHAR(10),
+    STDG_CD                     VARCHAR(10),
+    DONG_CD                     VARCHAR(10),
+    PLOT_SE_CD                  VARCHAR(1),
+    MNO                         VARCHAR(4),
+    SNO                         VARCHAR(4),
+    SPAREA_NM                   VARCHAR(200),
+    BLCK                        VARCHAR(100),
+    LT                          VARCHAR(100),
+    BYLT_CNT                    NUMERIC(7),
+    BLDG_NM                     VARCHAR(200),
+    DNG_NM                      VARCHAR(200),
+    HO_NM                       VARCHAR(200),
+    DNG_CD                      VARCHAR(10),
+    HO_CD                       VARCHAR(10),
+    ETC_FLLN_MTTR               VARCHAR(2000),
+    VLTN_BDST_YN                CHAR(1),
+    LDGR_SN                     VARCHAR(33),
+    SEPT_BDST_SE_CD             VARCHAR(5),
+    NW_OLD_LDGR_SE_CD           VARCHAR(5),
+    MANX_SE_CD                  VARCHAR(5),
+    MANX_SN                     NUMERIC(10),
+    LGLZTN_YN                   CHAR(1),
+    EXCPTN_MTTR_CN              VARCHAR(3000),
+    SIAR                        NUMERIC(19,9),
+    BDAR                        NUMERIC(19,9),
+    BDCVRT                      NUMERIC(19,9),
+    FART_CMPTTN_GFLA            NUMERIC(19,9),
+    FART                        NUMERIC(19,9),
+    GFLA                        NUMERIC(19,9),
+    MN_USG_CD                   VARCHAR(5),
+    ETC_USG_CN                  VARCHAR(1000),
+    STRCT_CD                    VARCHAR(5),
+    ETC_STRCT_CN                VARCHAR(1000),
+    ROOF_CD                     VARCHAR(5),
+    GTRF_CN                     VARCHAR(1000),
+    HH_CNT                      NUMERIC(10),
+    HSHD_CNT                    NUMERIC(10),
+    HO_CNT                      NUMERIC(10),
+    HGT                         NUMERIC(19,9),
+    GRND_NOFL                   NUMERIC(5),
+    UDGD_NOFL                   NUMERIC(5),
+    MBLD_CNT                    NUMERIC(7),
+    ANX_BDST_CNT                NUMERIC(7),
+    ANX_BDST_AREA               NUMERIC(19,9),
+    TT_DNG_GFLA                 NUMERIC(19,9),
+    PSNGR_ELVTR_CNT             NUMERIC(7),
+    EUSE_ELVTR_CNT              NUMERIC(7),
+    TPKCT_CNT                   NUMERIC(7),
+    PRMSN_YMD                   VARCHAR(8),
+    BGNCST_YMD                  VARCHAR(8),
+    USE_APRV_YMD                VARCHAR(8),
+    ENGY_EFFC_GRD_CD            VARCHAR(10),
+    ENGY_RDCTRT                 NUMERIC(19,9),
+    ENGY_EFFC_PRFRM_IDCT_SCR    NUMERIC(5),
+    ECFRD_BDST_GRD_CD           VARCHAR(5),
+    ECFRD_BDST_CERT_SCR         NUMERIC(7),
+    INTLL_BDST_GRD_CD           VARCHAR(5),
+    INTLL_BDST_CERT_SCR         NUMERIC(5),
+    MNG_UP_BDST_UNQ_NO          VARCHAR(33),
+    MTNC_BLDG_NM                VARCHAR(200),
+    MTNC_DNG_NM                 VARCHAR(200),
+    MTNC_HO_NM                  VARCHAR(200),
+    DTR_ADDR_ROAD_CD            VARCHAR(30),
+    DTR_ADDR_STDG_CD            VARCHAR(10),
+    DTR_ADDR_GRND_UDGD_CD       VARCHAR(5),
+    DTR_ADDR_MNO                VARCHAR(5),
+    DTR_ADDR_SNO                VARCHAR(5),
+    OPER_SRVR_RFLT_YN           CHAR(1),
+    FRST_RGTR_ID                VARCHAR(50) DEFAULT 'admin' NOT NULL,
+    FRST_REG_DT                 DATE DEFAULT SYSDATE NOT NULL,
+    LAST_MDFR_ID                VARCHAR(50) DEFAULT 'admin' NOT NULL,
+    LAST_MDFCN_DT               DATE DEFAULT SYSDATE NOT NULL
+    ) TABLESPACE TBS1;
+
+    CREATE TABLE T0
+    (
+    BDST_TYPE_SE_CD             VARCHAR(5),
+    MNG_BDST_UNQ_NO             VARCHAR(33),
+    HSTRY_BGNG_YM               VARCHAR(6),
+    HSTRY_END_YM                VARCHAR(6),
+    BDST_SE_CD                  VARCHAR(5),
+    LDGR_KND_CD                 VARCHAR(5),
+    SGG_CD                      VARCHAR(10),
+    STDG_CD                     VARCHAR(10),
+    DONG_CD                     VARCHAR(10),
+    PLOT_SE_CD                  VARCHAR(1),
+    MNO                         VARCHAR(4),
+    SNO                         VARCHAR(4),
+    SPAREA_NM                   VARCHAR(200),
+    BLCK                        VARCHAR(100),
+    LT                          VARCHAR(100),
+    BYLT_CNT                    NUMERIC(7),
+    BLDG_NM                     VARCHAR(200),
+    DNG_NM                      VARCHAR(200),
+    HO_NM                       VARCHAR(200),
+    DNG_CD                      VARCHAR(10),
+    HO_CD                       VARCHAR(10),
+    ETC_FLLN_MTTR               VARCHAR(2000),
+    VLTN_BDST_YN                CHAR(1),
+    LDGR_SN                     VARCHAR(33),
+    SEPT_BDST_SE_CD             VARCHAR(5),
+    NW_OLD_LDGR_SE_CD           VARCHAR(5),
+    MANX_SE_CD                  VARCHAR(5),
+    MANX_SN                     NUMERIC(10),
+    LGLZTN_YN                   CHAR(1),
+    EXCPTN_MTTR_CN              VARCHAR(3000),
+    SIAR                        NUMERIC(19,9),
+    BDAR                        NUMERIC(19,9),
+    BDCVRT                      NUMERIC(19,9),
+    FART_CMPTTN_GFLA            NUMERIC(19,9),
+    FART                        NUMERIC(19,9),
+    GFLA                        NUMERIC(19,9),
+    MN_USG_CD                   VARCHAR(5),
+    ETC_USG_CN                  VARCHAR(1000),
+    STRCT_CD                    VARCHAR(5),
+    ETC_STRCT_CN                VARCHAR(1000),
+    ROOF_CD                     VARCHAR(5),
+    GTRF_CN                     VARCHAR(1000),
+    HH_CNT                      NUMERIC(10),
+    HSHD_CNT                    NUMERIC(10),
+    HO_CNT                      NUMERIC(10),
+    HGT                         NUMERIC(19,9),
+    GRND_NOFL                   NUMERIC(5),
+    UDGD_NOFL                   NUMERIC(5),
+    MBLD_CNT                    NUMERIC(7),
+    ANX_BDST_CNT                NUMERIC(7),
+    ANX_BDST_AREA               NUMERIC(19,9),
+    TT_DNG_GFLA                 NUMERIC(19,9),
+    PSNGR_ELVTR_CNT             NUMERIC(7),
+    EUSE_ELVTR_CNT              NUMERIC(7),
+    TPKCT_CNT                   NUMERIC(7),
+    PRMSN_YMD                   VARCHAR(8),
+    BGNCST_YMD                  VARCHAR(8),
+    USE_APRV_YMD                VARCHAR(8),
+    ENGY_EFFC_GRD_CD            VARCHAR(10),
+    ENGY_RDCTRT                 NUMERIC(19,9),
+    ENGY_EFFC_PRFRM_IDCT_SCR    NUMERIC(5),
+    ECFRD_BDST_GRD_CD           VARCHAR(5),
+    ECFRD_BDST_CERT_SCR         NUMERIC(7),
+    INTLL_BDST_GRD_CD           VARCHAR(5),
+    INTLL_BDST_CERT_SCR         NUMERIC(5),
+    MNG_UP_BDST_UNQ_NO          VARCHAR(33),
+    MTNC_BLDG_NM                VARCHAR(200),
+    MTNC_DNG_NM                 VARCHAR(200),
+    MTNC_HO_NM                  VARCHAR(200),
+    DTR_ADDR_ROAD_CD            VARCHAR(30),
+    DTR_ADDR_STDG_CD            VARCHAR(10),
+    DTR_ADDR_GRND_UDGD_CD       VARCHAR(5),
+    DTR_ADDR_MNO                VARCHAR(5),
+    DTR_ADDR_SNO                VARCHAR(5),
+    OPER_SRVR_RFLT_YN           CHAR(1),
+    FRST_RGTR_ID                VARCHAR(50) DEFAULT 'admin' NOT NULL,
+    FRST_REG_DT                 DATE DEFAULT SYSDATE NOT NULL,
+    LAST_MDFR_ID                VARCHAR(50) DEFAULT 'admin' NOT NULL,
+    LAST_MDFCN_DT               DATE DEFAULT SYSDATE NOT NULL
+    ) TABLESPACE SYS_TBS_DISK_DATA;
+
+    INSERT INTO  T0
+    SELECT
+    CHR(65 + MOD(LEVEL, 26)), --    BDST_TYPE_SE_CD             VARCHAR(5),
+    LEVEL,                    --    MNG_BDST_UNQ_NO             VARCHAR(33),
+    CHR(65 + MOD(LEVEL, 26)), --    HSTRY_BGNG_YM               VARCHAR(6),
+    CHR(65 + MOD(LEVEL, 26)), --    HSTRY_END_YM                VARCHAR(6),
+    CHR(65 + MOD(LEVEL, 26)), --    BDST_SE_CD                  VARCHAR(5),
+    CHR(65 + MOD(LEVEL, 26)), --    LDGR_KND_CD                 VARCHAR(5),
+    CHR(65 + MOD(LEVEL, 26)), --    SGG_CD                      VARCHAR(10),
+    CHR(65 + MOD(LEVEL, 26)), --    STDG_CD                     VARCHAR(10),
+    CHR(65 + MOD(LEVEL, 26)), --    DONG_CD                     VARCHAR(10),
+    CHR(65 + MOD(LEVEL, 26)), --    PLOT_SE_CD                  VARCHAR(1),
+    CHR(65 + MOD(LEVEL, 26)), --    MNO                         VARCHAR(4),
+    CHR(65 + MOD(LEVEL, 26)), --    SNO                         VARCHAR(4),
+    CHR(65 + MOD(LEVEL, 26)), --    SPAREA_NM                   VARCHAR(200),
+    CHR(65 + MOD(LEVEL, 26)), --    BLCK                        VARCHAR(100),
+    CHR(65 + MOD(LEVEL, 26)), --    LT                          VARCHAR(100),
+    MOD(LEVEL, 26),           --    BYLT_CNT                    NUMERIC(7),
+    CHR(65 + MOD(LEVEL, 26)), --    BLDG_NM                     VARCHAR(200),
+    CHR(65 + MOD(LEVEL, 26)), --    DNG_NM                      VARCHAR(200),
+    CHR(65 + MOD(LEVEL, 26)), --    HO_NM                       VARCHAR(200),
+    CHR(65 + MOD(LEVEL, 26)), --    DNG_CD                      VARCHAR(10),
+    CHR(65 + MOD(LEVEL, 26)), --    HO_CD                       VARCHAR(10),
+    CHR(65 + MOD(LEVEL, 26)), --    ETC_FLLN_MTTR               VARCHAR(2000),
+    CHR(65 + MOD(LEVEL, 26)), --    VLTN_BDST_YN                CHAR(1),
+    CHR(65 + MOD(LEVEL, 26)), --    LDGR_SN                     VARCHAR(33),
+    CHR(65 + MOD(LEVEL, 26)), --    SEPT_BDST_SE_CD             VARCHAR(5),
+    CHR(65 + MOD(LEVEL, 26)), --    NW_OLD_LDGR_SE_CD           VARCHAR(5),
+    CHR(65 + MOD(LEVEL, 26)), --    MANX_SE_CD                  VARCHAR(5),
+    MOD(LEVEL, 26),           --    MANX_SN                     NUMERIC(10),
+    CHR(65 + MOD(LEVEL, 26)), --    LGLZTN_YN                   CHAR(1),
+    CHR(65 + MOD(LEVEL, 26)), --    EXCPTN_MTTR_CN              VARCHAR(3000),
+    MOD(LEVEL, 26),           --    SIAR                        NUMERIC(19,9),
+    MOD(LEVEL, 26),           --    BDAR                        NUMERIC(19,9),
+    MOD(LEVEL, 26),           --    BDCVRT                      NUMERIC(19,9),
+    MOD(LEVEL, 26),           --    FART_CMPTTN_GFLA            NUMERIC(19,9),
+    MOD(LEVEL, 26),           --    FART                        NUMERIC(19,9),
+    MOD(LEVEL, 26),           --    GFLA                        NUMERIC(19,9),
+    CHR(65 + MOD(LEVEL, 26)), --    MN_USG_CD                   VARCHAR(5),
+    CHR(65 + MOD(LEVEL, 26)), --    ETC_USG_CN                  VARCHAR(1000),
+    CHR(65 + MOD(LEVEL, 26)), --    STRCT_CD                    VARCHAR(5),
+    CHR(65 + MOD(LEVEL, 26)), --    ETC_STRCT_CN                VARCHAR(1000),
+    CHR(65 + MOD(LEVEL, 26)), --    ROOF_CD                     VARCHAR(5),
+    CHR(65 + MOD(LEVEL, 26)), --    GTRF_CN                     VARCHAR(1000),
+    MOD(LEVEL, 26),           --    HH_CNT                      NUMERIC(10),
+    MOD(LEVEL, 26),           --    HSHD_CNT                    NUMERIC(10),
+    MOD(LEVEL, 26),           --    HO_CNT                      NUMERIC(10),
+    MOD(LEVEL, 26),           --    HGT                         NUMERIC(19,9),
+    MOD(LEVEL, 26),           --    GRND_NOFL                   NUMERIC(5),
+    MOD(LEVEL, 26),           --    UDGD_NOFL                   NUMERIC(5),
+    MOD(LEVEL, 26),           --    MBLD_CNT                    NUMERIC(7),
+    MOD(LEVEL, 26),           --    ANX_BDST_CNT                NUMERIC(7),
+    MOD(LEVEL, 26),           --    ANX_BDST_AREA               NUMERIC(19,9),
+    MOD(LEVEL, 26),           --    TT_DNG_GFLA                 NUMERIC(19,9),
+    MOD(LEVEL, 26),           --    PSNGR_ELVTR_CNT             NUMERIC(7),
+    MOD(LEVEL, 26),           --    EUSE_ELVTR_CNT              NUMERIC(7),
+    MOD(LEVEL, 26),           --    TPKCT_CNT                   NUMERIC(7),
+    CHR(65 + MOD(LEVEL, 26)), --    PRMSN_YMD                   VARCHAR(8),
+    CHR(65 + MOD(LEVEL, 26)), --    BGNCST_YMD                  VARCHAR(8),
+    CHR(65 + MOD(LEVEL, 26)), --    USE_APRV_YMD                VARCHAR(8),
+    CHR(65 + MOD(LEVEL, 26)), --    ENGY_EFFC_GRD_CD            VARCHAR(10),
+    MOD(LEVEL, 26),           --    ENGY_RDCTRT                 NUMERIC(19,9),
+    MOD(LEVEL, 26),           --    ENGY_EFFC_PRFRM_IDCT_SCR    NUMERIC(5),
+    CHR(65 + MOD(LEVEL, 26)), --    ECFRD_BDST_GRD_CD           VARCHAR(5),
+    MOD(LEVEL, 26),           --    ECFRD_BDST_CERT_SCR         NUMERIC(7),
+    CHR(65 + MOD(LEVEL, 26)), --    INTLL_BDST_GRD_CD           VARCHAR(5),
+    MOD(LEVEL, 9999),         --    INTLL_BDST_CERT_SCR         NUMERIC(5),
+    CHR(65 + MOD(LEVEL, 26)), --    MNG_UP_BDST_UNQ_NO          VARCHAR(33),
+    CHR(65 + MOD(LEVEL, 26)), --    MTNC_BLDG_NM                VARCHAR(200),
+    CHR(65 + MOD(LEVEL, 26)), --    MTNC_DNG_NM                 VARCHAR(200),
+    CHR(65 + MOD(LEVEL, 26)), --    MTNC_HO_NM                  VARCHAR(200),
+    CHR(65 + MOD(LEVEL, 26)), --    DTR_ADDR_ROAD_CD            VARCHAR(30),
+    CHR(65 + MOD(LEVEL, 26)), --    DTR_ADDR_STDG_CD            VARCHAR(10),
+    CHR(65 + MOD(LEVEL, 26)), --    DTR_ADDR_GRND_UDGD_CD       VARCHAR(5),
+    CHR(65 + MOD(LEVEL, 26)), --    DTR_ADDR_MNO                VARCHAR(5),
+    CHR(65 + MOD(LEVEL, 26)), --    DTR_ADDR_SNO                VARCHAR(5),
+    CHR(65 + MOD(LEVEL, 26)), --    OPER_SRVR_RFLT_YN           CHAR(1),
+    CHR(65 + MOD(LEVEL, 26)), --    FRST_RGTR_ID                VARCHAR(50) DEFAULT 'admin' NOT NULL,
+    SYSDATE,                  --    FRST_REG_DT                 DATE DEFAULT SYSDATE NOT NULL,
+    CHR(65 + MOD(LEVEL, 26)), --    LAST_MDFR_ID                VARCHAR(50) DEFAULT 'admin' NOT NULL,
+    SYSDATE                   --    LAST_MDFCN_DT               DATE DEFAULT SYSDATE NOT NULL
+    FROM DUAL
+    CONNECT BY LEVEL <= 100000;
+
+    alter system set __TEMP_ROW_FORMAT_MODE = 2;
+set timing on;
+
+INSERT INTO T1
+    SELECT BDST_TYPE_SE_CD
+    , MNG_BDST_UNQ_NO
+    , BDST_SE_CD
+    , LDGR_KND_CD
+    , SGG_CD
+    , STDG_CD
+    , DNG_CD
+    , PLOT_SE_CD
+    , MNO
+    , SNO
+    , SPAREA_NM
+    , BLCK
+    , LT
+    , BYLT_CNT
+    , BLDG_NM
+    , DNG_NM
+    , HO_NM
+    , DNG_CD
+    , HO_CD
+    , ETC_FLLN_MTTR
+    , VLTN_BDST_YN
+    , LDGR_SN
+    , SEPT_BDST_SE_CD
+    , NW_OLD_LDGR_SE_CD
+    , MANX_SE_CD
+    , MANX_SN
+    , LGLZTN_YN
+    , EXCPTN_MTTR_CN
+    , SIAR
+    , BDAR
+    , BDCVRT
+    , FART_CMPTTN_GFLA
+    , FART
+    , GFLA
+    , MN_USG_CD
+    , ETC_USG_CN
+    , STRCT_CD
+    , ETC_STRCT_CN
+    , ROOF_CD
+    , GTRF_CN
+    , HH_CNT
+    , HSHD_CNT
+    , HO_CNT
+    , HGT
+    , GRND_NOFL
+    , UDGD_NOFL
+    , MBLD_CNT
+    , ANX_BDST_CNT
+    , ANX_BDST_AREA
+    , TT_DNG_GFLA
+    , PSNGR_ELVTR_CNT
+    , EUSE_ELVTR_CNT
+    , TPKCT_CNT
+    , PRMSN_YMD
+    , BGNCST_YMD
+    , USE_APRV_YMD
+    , ENGY_EFFC_GRD_CD
+    , ENGY_RDCTRT
+    , ENGY_EFFC_PRFRM_IDCT_SCR
+    , ECFRD_BDST_GRD_CD
+    , ECFRD_BDST_CERT_SCR
+    , INTLL_BDST_GRD_CD
+    , INTLL_BDST_CERT_SCR
+    , MNG_UP_BDST_UNQ_NO
+    , MTNC_BLDG_NM
+    , MTNC_DNG_NM
+    , MTNC_HO_NM
+    , DTR_ADDR_ROAD_CD
+    , DTR_ADDR_STDG_CD
+    , DTR_ADDR_GRND_UDGD_CD
+    , DTR_ADDR_MNO
+    , DTR_ADDR_SNO
+    , OPER_SRVR_RFLT_YN
+    , 'admin'
+    , SYSDATE
+    , 'admin'
+    , SYSDATE
+    FROM (SELECT TB1.*
+    , ROW_NUMBER() OVER(PARTITION BY BDST_TYPE_SE_CD, MNG_BDST_UNQ_NO ORDER BY
+    ROWNUM, HSTRY_END_YM DESC, HSTRY_BGNG_YM DESC) AS SEQNO
+    from T0  TB1
+    )
+    WHERE SEQNO =1;
+set timing off;
+    select
+        case when t.p4 < (t.p5 * 2) then 1 else 0 end as is_gt
+    from (
+        select
+            max(case when id = 4 then total_page_count end) as p4,
+            max(case when id = 5 then total_page_count end) as p5
+        from x$tablespaces
+        where id > 3
+    ) t;
+
+    select id, total_page_count from x$tablespaces where id > 3;
+
+    DROP TABLE T0;
+    DROP TABLE T1;
+    DROP TABLESPACE TBS1 INCLUDING CONTENTS AND DATAFILES;
+

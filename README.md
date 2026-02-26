@@ -17,7 +17,7 @@ Altibase SQL 테스트를 Python으로 실행하고 `PASS / ORDER / FAIL / ERROR
   - `clean`
   - `server`
   - `diff`
-- Java UI 사용 시 `java` 필요 (`--ui java`)
+- 기본 UI는 Java 이며 `java` 명령이 필요
 
 명령 확인:
 
@@ -57,6 +57,53 @@ tests/tests.ts
     -> tests/hash/hash.ts
     -> ...
 ```
+
+### 3.1 `--+` 디렉티브 문법
+
+SQL 파일에서 줄 시작이 `--+` 인 라인은 러너가 먼저 해석하는 제어 디렉티브입니다.
+
+지원 키워드:
+
+- `--+SYSTEM <shell command>;`
+- `--+SET_ENV <KEY>=<VALUE>;`
+- `--+UNSET_ENV <KEY>;`
+- `--+TIMEOUT_SEC <n>;`
+- `--+SKIP BEGIN;`
+- `--+SKIP END;`
+
+주의사항:
+
+- 디렉티브는 반드시 줄 시작이 `--+` 이어야 합니다.
+- `SYSTEM`/`SET_ENV`/`UNSET_ENV` 는 반드시 `;` 로 끝나야 합니다.
+- `TIMEOUT_SEC` 는 초 단위 정수(`> 0`)여야 하며 `;` 로 끝나야 합니다.
+- `SKIP` 문법은 공백 포함한 `SKIP BEGIN;` / `SKIP END;` 만 허용됩니다.
+- `SKIP_BEGIN`, `SKIP_END` 같은 형태는 지원하지 않습니다.
+
+예시:
+
+```sql
+--+SET_ENV ALTIBASE_PORT_NO=17730;
+--+TIMEOUT_SEC 600;
+--+SYSTEM server start;
+--+SKIP BEGIN;
+drop table t1;
+--+SKIP END;
+```
+
+### 3.2 `.ts`에서 케이스별 timeout 지정
+
+`.ts` 엔트리 한 줄에 옵션을 붙일 수 있습니다.
+
+```text
+./fullscan/16_temp_row_mode2_wide_payload.sql | timeout_sec=600
+./fullscan/15_temp_row_mode2_compact_payload.sql | timeout=300
+```
+
+주의사항:
+
+- 옵션은 `.sql` 엔트리에만 허용됩니다. (`.ts` include 라인에는 사용 불가)
+- `timeout` / `timeout_sec` 키만 지원합니다.
+- 값은 초 단위 정수(`> 0`)여야 합니다.
 
 ## 4. 실행 방법
 
@@ -122,13 +169,20 @@ FATAL 발생 시 복구하고 계속:
 | `--order-is-pass` | ORDER를 종료코드 0으로 취급 |
 | `--fatal-recover` | FATAL 시 `clean -> server start` 복구 |
 | `--fatal-recover-max <n>` | 복구 최대 시도 횟수 |
+| `--continue-on-error` | ERROR 발생 후에도 다음 케이스 계속 실행 (기본은 첫 ERROR에서 중단) |
 | `--accept-out` | FAIL 케이스 `.out -> .lst` 반영 |
 | `--accept-missing-only` | `FAIL(missing_lst)`만 반영 |
 | `--open-viewdiff` | 실행 후 이슈 있으면 viewdiff 열기 |
-| `--ui <cli|java>` | viewdiff UI 선택 |
-| `--diff-tool <cmd>` | diff 도구 지정 |
+| `--ui <cli|java>` | viewdiff UI 선택 (기본: `java`) |
+| `--diff-tool <cmd>` | diff 도구 지정 (기본 자동 탐색: `meld -> kdiff3 -> code --diff`) |
 | `--non-interactive` | 비대화식 실행 |
 | `--ai-report` | `triage.json`, `summary.txt` 생성 |
+
+timeout 우선순위:
+
+1. SQL 디렉티브 `--+TIMEOUT_SEC <n>;`
+2. `.ts` 엔트리 옵션 `| timeout_sec=<n>` (또는 `timeout=<n>`)
+3. CLI 옵션 `--timeout-sec <n>`
 
 ## 6. 결과 확인 (viewdiff)
 
@@ -144,15 +198,36 @@ FATAL 발생 시 복구하고 계속:
 ./bin/viewdiff --run-json out/runs/<run_id>/run.json
 ```
 
-Java UI 사용:
+`--run-json` 기본값은 `out/last_run.json` 이며, `viewdiff`는 다음 순서로 경로를 찾습니다.
+
+1. 현재 작업 디렉터리 기준 (`./out/last_run.json`)
+2. `$SQL_TEST_HOME` 기준 (`$SQL_TEST_HOME/out/last_run.json`)
+3. `viewdiff` 설치 경로 기준 (`<sql_test>/out/last_run.json`)
+
+그래서 테스트를 실행한 위치가 어디든 해당 run을 우선 찾고, 없으면 공용 기본 경로를 자동으로 찾습니다.
+
+Java UI 사용 (기본값):
 
 ```bash
-./bin/viewdiff --ui java
+./bin/viewdiff
 ```
+
+CLI UI로 강제:
+
+```bash
+./bin/viewdiff --ui cli
+```
+
+Java UI에서 `View OUT` 버튼을 누르면 `out` 내용이 별도 창으로 열립니다.
+이 창은 크기 조절이 가능하며, `FAIL` 케이스는 창 안의 `Accept OUT -> LST` 버튼으로 바로 반영할 수 있습니다.
+
+diff 도구는 기본적으로 `meld -> kdiff3 -> code --diff` 순서로 자동 선택합니다.
+필요하면 `--diff-tool "<cmd>"` 또는 `ALTI_DIFF_TOOL` 환경변수로 강제할 수 있습니다.
 
 CLI 모드에서 FAIL/ERROR/ORDER/FATAL 목록 확인 후:
 
 - `o <index>`: diff 열기
+- `v <index>`: `FAIL(missing_lst)` 케이스의 `out` 본문 보기
 - `a <index>`: FAIL 케이스 `out -> lst` 반영
 - `r`: 새로고침
 - `q`: 종료

@@ -19,6 +19,7 @@ class RunOptions:
     order_is_pass: bool
     fatal_recover: bool
     fatal_recover_max: int
+    continue_on_error: bool
     raw_diff: bool
     accept_out: bool
     accept_missing_only: bool
@@ -43,6 +44,7 @@ class CasePlan:
     sql_path: str
     mode: str
     phases: List[PhasePlan] = field(default_factory=list)
+    timeout_sec_override: Optional[int] = None
     init_sql: str = ""
     test_sql: str = ""
     destroy_sql: str = ""
@@ -87,4 +89,3 @@ class RunResult:
     summary: Dict[str, int]
     results: List[CaseResult]
     run_state: Dict[str, object]
-

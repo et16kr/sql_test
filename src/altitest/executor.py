@@ -19,6 +19,16 @@ class CommandResult:
     error: str = ""
 
 
+def _to_text(value: object) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    if isinstance(value, str):
+        return value
+    return str(value)
+
+
 
 def run_shell_command(command: str, env: Dict[str, str], timeout_sec: int) -> CommandResult:
     try:
@@ -31,9 +41,15 @@ def run_shell_command(command: str, env: Dict[str, str], timeout_sec: int) -> Co
             env=env,
             timeout=timeout_sec,
         )
-        return CommandResult(returncode=proc.returncode, stdout=proc.stdout, stderr=proc.stderr)
+        return CommandResult(returncode=proc.returncode, stdout=_to_text(proc.stdout), stderr=_to_text(proc.stderr))
     except subprocess.TimeoutExpired as e:
-        return CommandResult(returncode=124, stdout=e.stdout or "", stderr=e.stderr or "", timed_out=True, error="timeout")
+        return CommandResult(
+            returncode=124,
+            stdout=_to_text(e.stdout),
+            stderr=_to_text(e.stderr),
+            timed_out=True,
+            error="timeout",
+        )
     except Exception as e:  # pragma: no cover - defensive
         return CommandResult(returncode=1, stdout="", stderr="", error=str(e))
 
@@ -55,9 +71,15 @@ def execute_is(sql_file: str, timeout_sec: int, env: Dict[str, str]) -> CommandR
     command = ["is", "-f", sql_file]
     try:
         proc = subprocess.run(command, capture_output=True, text=True, env=env, timeout=timeout_sec)
-        return CommandResult(returncode=proc.returncode, stdout=proc.stdout, stderr=proc.stderr)
+        return CommandResult(returncode=proc.returncode, stdout=_to_text(proc.stdout), stderr=_to_text(proc.stderr))
     except subprocess.TimeoutExpired as e:
-        return CommandResult(returncode=124, stdout=e.stdout or "", stderr=e.stderr or "", timed_out=True, error="timeout")
+        return CommandResult(
+            returncode=124,
+            stdout=_to_text(e.stdout),
+            stderr=_to_text(e.stderr),
+            timed_out=True,
+            error="timeout",
+        )
     except FileNotFoundError as e:
         return CommandResult(returncode=127, stdout="", stderr="", error=str(e))
     except Exception as e:  # pragma: no cover - defensive
@@ -65,9 +87,8 @@ def execute_is(sql_file: str, timeout_sec: int, env: Dict[str, str]) -> CommandR
 
 
 
-def write_text(path: str, text: str) -> None:
+def write_text(path: str, text: object) -> None:
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     with p.open("w", encoding="utf-8") as f:
-        f.write(text)
-
+        f.write(_to_text(text))
