@@ -1,0 +1,108 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Regression test for FIRST_VALUE update-column handling in disk temp window sort.
+iSQL> -- Checks: No internal error on mixed payload lengths (14/15/3200) and stable ranking output.
+iSQL> -- Disk sort temp coverage WN05: FIRST_VALUE + DENSE_RANK update path with boundary payload lengths
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DST_COV_WN05
+(
+    ID         INTEGER,
+    GRP_ID     INTEGER,
+    V_PAYLOAD  VARCHAR(3200),
+    V_SORT     VARCHAR(3200),
+    V_PAD      VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DST_COV_WN05
+SELECT LEVEL,
+       MOD(LEVEL, 29),
+       CASE MOD(LEVEL, 3)
+            WHEN 0 THEN RPAD('A' || TO_CHAR(LEVEL), 14, 'A')
+            WHEN 1 THEN RPAD('B' || TO_CHAR(LEVEL), 15, 'B')
+            ELSE RPAD('C' || TO_CHAR(LEVEL), 3200, 'C')
+       END,
+       RPAD('S' || TO_CHAR(MOD(LEVEL, 240)), 3200, 'S'),
+       RPAD('P' || TO_CHAR(MOD(LEVEL, 90)), 3200, 'P')
+  FROM DUAL
+CONNECT BY LEVEL <= 2200;
+2200 rows inserted.
+iSQL> SELECT GRP_ID,
+       MIN(FV_LEN) AS MIN_FV_LEN,
+       MAX(FV_LEN) AS MAX_FV_LEN,
+       COUNT(*) AS CNT
+  FROM (
+        SELECT GRP_ID,
+               DENSE_RANK() OVER (PARTITION BY GRP_ID ORDER BY V_SORT DESC, ID) AS DRANK,
+               LENGTH(FIRST_VALUE(V_PAYLOAD) OVER (PARTITION BY GRP_ID ORDER BY V_SORT DESC, ID)) AS FV_LEN
+          FROM DST_COV_WN05
+       ) W
+ WHERE DRANK <= 2
+ GROUP BY GRP_ID
+ ORDER BY GRP_ID;
+GRP_ID      MIN_FV_LEN           MAX_FV_LEN           CNT                  
+--------------------------------------------------------------------------------
+0           15                   15                   2                    
+1           3200                 3200                 2                    
+2           14                   14                   2                    
+3           3200                 3200                 2                    
+4           14                   14                   2                    
+5           15                   15                   2                    
+6           3200                 3200                 2                    
+7           14                   14                   2                    
+8           15                   15                   2                    
+9           14                   14                   2                    
+10          14                   14                   2                    
+11          3200                 3200                 2                    
+12          14                   14                   2                    
+13          15                   15                   2                    
+14          3200                 3200                 2                    
+15          14                   14                   2                    
+16          15                   15                   2                    
+17          14                   14                   2                    
+18          14                   14                   2                    
+19          3200                 3200                 2                    
+20          14                   14                   2                    
+21          15                   15                   2                    
+22          3200                 3200                 2                    
+23          14                   14                   2                    
+24          3200                 3200                 2                    
+25          14                   14                   2                    
+26          15                   15                   2                    
+27          3200                 3200                 2                    
+28          14                   14                   2                    
+29 rows selected.
+iSQL> SELECT ID,
+       GRP_ID,
+       LENGTH(FV) AS FV_LEN,
+       DRANK
+  FROM (
+        SELECT /*+ TEMP_TBS_DISK */
+               ID,
+               GRP_ID,
+               FIRST_VALUE(V_PAYLOAD) OVER (PARTITION BY GRP_ID ORDER BY V_SORT DESC, ID) AS FV,
+               DENSE_RANK() OVER (PARTITION BY GRP_ID ORDER BY V_SORT DESC, ID) AS DRANK
+          FROM DST_COV_WN05
+       ) W
+ WHERE GRP_ID IN (0, 1, 2, 3)
+   AND DRANK <= 2
+ ORDER BY GRP_ID, DRANK, ID;
+ID          GRP_ID      FV_LEN               DRANK                
+-----------------------------------------------------------------------
+1537        0           15                   1                    
+812         0           15                   2                    
+1538        1           3200                 1                    
+813         1           3200                 2                    
+1539        2           14                   1                    
+814         2           14                   2                    
+815         3           3200                 1                    
+1772        3           3200                 2                    
+8 rows selected.
+iSQL> DROP TABLE DST_COV_WN05;
+Drop success.

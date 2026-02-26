@@ -7,9 +7,17 @@ from collections import Counter
 from typing import List, Optional, Sequence, Tuple
 
 
+_VOLATILE_LINE_PATTERNS: Sequence[re.Pattern[str]] = (
+    re.compile(r"^\s*elapsed\s+time\s*:\s*.+$", re.IGNORECASE),
+    re.compile(r"^\s*Release\s+Version\b.*$", re.IGNORECASE),
+    re.compile(r"^\s*ISQL_CONNECTION\s*=.*PORT_NO\s*=.*$", re.IGNORECASE),
+)
+
+
 def normalize_text(text: str) -> str:
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     lines = [line.rstrip() for line in text.split("\n")]
+    lines = [line for line in lines if not any(pattern.match(line) for pattern in _VOLATILE_LINE_PATTERNS)]
     while lines and lines[-1] == "":
         lines.pop()
     return "\n".join(lines) + ("\n" if lines else "")
@@ -106,4 +114,3 @@ def order_only_mismatch(expected_norm: str, actual_norm: str) -> Optional[bool]:
     if Counter(expected_rows) != Counter(actual_rows):
         return False
     return list(expected_rows) != list(actual_rows)
-
