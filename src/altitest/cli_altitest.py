@@ -552,7 +552,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         case_result.err = case_result.err
         results.append(case_result)
 
-        sql_indent = "  " * max(1, len(owner_chain))
+        sql_indent = "  " * len(owner_chain)
         print(f"{sql_indent}{format_case_line(case_result.sql, case_result.status)}")
 
         if case_result.status == config.STATUS_FATAL:

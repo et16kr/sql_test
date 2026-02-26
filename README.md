@@ -66,6 +66,12 @@ tests/tests.ts
 ./bin/altitest tests/tests.ts
 ```
 
+단일 SQL 1건만 바로 실행:
+
+```bash
+./bin/altitest tests/window/04_window_resort_varmix.sql
+```
+
 실행 출력은 `.ts` 단위로 그룹화됩니다.
 상위 `.ts` 포함 관계까지 함께 출력되며, 마지막(leaf) `.ts` 아래 SQL 결과가 출력됩니다.
 
