@@ -12,9 +12,9 @@
 --+SET_ENV ALTIBASE_SYS_TEMP_FILE_INIT_SIZE=1048576;
 --+SYSTEM clean;
 --+SYSTEM server start;
---+SKIP BEGIN;
+--+SKIP_BEGIN;
 drop table gb_repro;
---+SKIP END;
+--+SKIP_END;
 
 create table gb_repro
 (

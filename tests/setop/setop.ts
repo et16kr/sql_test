@@ -1,3 +1,4 @@
 01_union_distinct_sort.sql
 02_minus_sort.sql
 03_intersect_order.sql
+04_memory_table_disk_temp_property_union.sql

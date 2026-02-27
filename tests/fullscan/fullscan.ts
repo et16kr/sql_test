@@ -14,3 +14,5 @@
 14_groupby_repro_mode_compare.sql
 15_temp_row_mode2_compact_payload.sql
 16_temp_row_mode2_wide_payload.sql | timeout_sec=600
+17_memory_table_disk_temp_property.sql
+18_memory_table_disk_temp_property_char_varchar_mix.sql

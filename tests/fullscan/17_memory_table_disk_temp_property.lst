@@ -1,0 +1,109 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Validate disk temp execution on memory table by property.
+iSQL> -- Checks:
+iSQL> --   1) table is created without TABLESPACE clause (memory table path)
+iSQL> --   2) __OPTIMIZER_DEFAULT_TEMP_TBS_TYPE = 2 is applied
+iSQL> --   3) query result is correct
+iSQL> --   4) property is reset to default (0) at end
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> ALTER SYSTEM SET __OPTIMIZER_DEFAULT_TEMP_TBS_TYPE = 2;
+Alter success.
+iSQL> SELECT CASE
+           WHEN MEMORY_VALUE1 = '2' THEN 1 ELSE 0
+       END AS PASS_PROP_SET
+  FROM X$PROPERTY
+ WHERE NAME = '__OPTIMIZER_DEFAULT_TEMP_TBS_TYPE';
+PASS_PROP_SET 
+----------------
+1           
+1 row selected.
+iSQL> CREATE TABLE DST_COV_FS17_MEM
+(
+    ID      INTEGER,
+    K1      VARCHAR(128),
+    PAD1    VARCHAR(512)
+);
+Create success.
+iSQL> INSERT INTO DST_COV_FS17_MEM
+SELECT LEVEL,
+       'K' || LPAD(TO_CHAR(MOD(LEVEL, 701)), 4, '0'),
+       RPAD('M' || TO_CHAR(MOD(LEVEL, 701)), 300, 'M')
+  FROM DUAL
+CONNECT BY LEVEL <= 4000;
+4000 rows inserted.
+iSQL> SELECT ID,
+       K1
+  FROM DST_COV_FS17_MEM
+ ORDER BY K1, ID
+ LIMIT 20;
+ID          
+--------------
+K1                                                                                                                                
+------------------------------------------------------------------------------------------------------------------------------------
+701         
+K0000                                                                                                                             
+1402        
+K0000                                                                                                                             
+2103        
+K0000                                                                                                                             
+2804        
+K0000                                                                                                                             
+3505        
+K0000                                                                                                                             
+1           
+K0001                                                                                                                             
+702         
+K0001                                                                                                                             
+1403        
+K0001                                                                                                                             
+2104        
+K0001                                                                                                                             
+2805        
+K0001                                                                                                                             
+3506        
+K0001                                                                                                                             
+2           
+K0002                                                                                                                             
+703         
+K0002                                                                                                                             
+1404        
+K0002                                                                                                                             
+2105        
+K0002                                                                                                                             
+2806        
+K0002                                                                                                                             
+3507        
+K0002                                                                                                                             
+3           
+K0003                                                                                                                             
+704         
+K0003                                                                                                                             
+1405        
+K0003                                                                                                                             
+20 rows selected.
+iSQL> SELECT CASE WHEN COUNT(*) = 4000 THEN 1 ELSE 0 END AS PASS_COUNT
+  FROM DST_COV_FS17_MEM;
+PASS_COUNT  
+--------------
+1           
+1 row selected.
+iSQL> ALTER SYSTEM SET __OPTIMIZER_DEFAULT_TEMP_TBS_TYPE = 0;
+Alter success.
+iSQL> SELECT CASE
+           WHEN MEMORY_VALUE1 = '0' THEN 1 ELSE 0
+       END AS PASS_PROP_RESET
+  FROM X$PROPERTY
+ WHERE NAME = '__OPTIMIZER_DEFAULT_TEMP_TBS_TYPE';
+PASS_PROP_RESET 
+------------------
+1           
+1 row selected.
+iSQL> DROP TABLE DST_COV_FS17_MEM;
+Drop success.

@@ -1,0 +1,161 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Validate FIRST_VALUE update-column path on memory table with disk-temp default property.
+iSQL> -- Checks:
+iSQL> --   1) table is created without TABLESPACE clause (memory table path)
+iSQL> --   2) __OPTIMIZER_DEFAULT_TEMP_TBS_TYPE = 2 is applied
+iSQL> --   3) FIRST_VALUE + DENSE_RANK works with 14/15/3200 payload boundaries
+iSQL> --   4) property is reset to default (0) at end
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> ALTER SYSTEM SET __OPTIMIZER_DEFAULT_TEMP_TBS_TYPE = 2;
+Alter success.
+iSQL> SELECT CASE
+           WHEN MEMORY_VALUE1 = '2' THEN 1 ELSE 0
+       END AS PASS_PROP_SET
+  FROM X$PROPERTY
+ WHERE NAME = '__OPTIMIZER_DEFAULT_TEMP_TBS_TYPE';
+PASS_PROP_SET 
+----------------
+1           
+1 row selected.
+iSQL> CREATE TABLE DWIN_COV07_MEM_UPD
+(
+    ID         INTEGER,
+    GRP_ID     INTEGER,
+    V_PAYLOAD  VARCHAR(3200),
+    V_SORT     VARCHAR(3200)
+);
+Create success.
+iSQL> INSERT INTO DWIN_COV07_MEM_UPD
+SELECT LEVEL,
+       MOD(LEVEL, 31),
+       CASE MOD(LEVEL, 3)
+            WHEN 0 THEN RPAD('A' || TO_CHAR(LEVEL), 14, 'A')
+            WHEN 1 THEN RPAD('B' || TO_CHAR(LEVEL), 15, 'B')
+            ELSE RPAD('C' || TO_CHAR(LEVEL), 3200, 'C')
+       END,
+       CASE
+            WHEN MOD(LEVEL, 3) = MOD(MOD(LEVEL, 31), 3)
+            THEN RPAD('Z' || TO_CHAR(LEVEL), 3200, 'Z')
+            ELSE RPAD('Q' || TO_CHAR(LEVEL), 3200, 'Q')
+       END
+  FROM DUAL
+CONNECT BY LEVEL <= 2600;
+2600 rows inserted.
+iSQL> SELECT GRP_ID,
+       MIN(FV_LEN) AS MIN_FV_LEN,
+       MAX(FV_LEN) AS MAX_FV_LEN,
+       COUNT(*) AS CNT
+  FROM (
+        SELECT GRP_ID,
+               DENSE_RANK() OVER (
+                   PARTITION BY GRP_ID
+                   ORDER BY V_SORT DESC, ID
+               ) AS DRANK,
+               LENGTH(
+                   FIRST_VALUE(V_PAYLOAD) OVER (
+                       PARTITION BY GRP_ID
+                       ORDER BY V_SORT DESC, ID
+                   )
+               ) AS FV_LEN
+          FROM DWIN_COV07_MEM_UPD
+       ) W
+ WHERE DRANK <= 2
+ GROUP BY GRP_ID
+ ORDER BY GRP_ID
+ LIMIT 31;
+GRP_ID      MIN_FV_LEN           MAX_FV_LEN           CNT                  
+--------------------------------------------------------------------------------
+0           14                   14                   2                    
+1           15                   15                   2                    
+2           3200                 3200                 2                    
+3           14                   14                   2                    
+4           15                   15                   2                    
+5           3200                 3200                 2                    
+6           14                   14                   2                    
+7           15                   15                   2                    
+8           3200                 3200                 2                    
+9           14                   14                   2                    
+10          15                   15                   2                    
+11          3200                 3200                 2                    
+12          14                   14                   2                    
+13          15                   15                   2                    
+14          3200                 3200                 2                    
+15          14                   14                   2                    
+16          15                   15                   2                    
+17          3200                 3200                 2                    
+18          14                   14                   2                    
+19          15                   15                   2                    
+20          3200                 3200                 2                    
+21          14                   14                   2                    
+22          15                   15                   2                    
+23          3200                 3200                 2                    
+24          14                   14                   2                    
+25          15                   15                   2                    
+26          3200                 3200                 2                    
+27          14                   14                   2                    
+28          15                   15                   2                    
+29          3200                 3200                 2                    
+30          14                   14                   2                    
+31 rows selected.
+iSQL> SELECT CASE
+           WHEN (
+                SELECT COUNT(*)
+                  FROM (
+                        SELECT GRP_ID,
+                               DENSE_RANK() OVER (
+                                   PARTITION BY GRP_ID
+                                   ORDER BY V_SORT DESC, ID
+                               ) AS DRANK
+                          FROM DWIN_COV07_MEM_UPD
+                       ) W
+                 WHERE DRANK = 1
+                ) = 31
+           THEN 1 ELSE 0
+       END AS PASS_TOP1_CNT
+  FROM DUAL;
+PASS_TOP1_CNT 
+----------------
+1           
+1 row selected.
+iSQL> SELECT CASE
+           WHEN (
+                SELECT COUNT(*)
+                  FROM (
+                        SELECT DISTINCT
+                               LENGTH(
+                                   FIRST_VALUE(V_PAYLOAD) OVER (
+                                       PARTITION BY GRP_ID
+                                       ORDER BY V_SORT DESC, ID
+                                   )
+                               ) AS FV_LEN
+                          FROM DWIN_COV07_MEM_UPD
+                       ) X
+                 WHERE FV_LEN IN (14, 15, 3200)
+                ) = 3
+           THEN 1 ELSE 0
+       END AS PASS_FV_LEN_CLASSES
+  FROM DUAL;
+PASS_FV_LEN_CLASSES 
+----------------------
+1           
+1 row selected.
+iSQL> ALTER SYSTEM SET __OPTIMIZER_DEFAULT_TEMP_TBS_TYPE = 0;
+Alter success.
+iSQL> SELECT CASE
+           WHEN MEMORY_VALUE1 = '0' THEN 1 ELSE 0
+       END AS PASS_PROP_RESET
+  FROM X$PROPERTY
+ WHERE NAME = '__OPTIMIZER_DEFAULT_TEMP_TBS_TYPE';
+PASS_PROP_RESET 
+------------------
+1           
+1 row selected.
+iSQL> DROP TABLE DWIN_COV07_MEM_UPD;
+Drop success.

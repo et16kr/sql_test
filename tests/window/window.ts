@@ -3,3 +3,5 @@
 03_insert_select_nested_order.sql
 04_window_resort_varmix.sql
 05_firstvalue_update_boundary.sql
+06_memory_table_disk_temp_property_window.sql
+07_memory_table_disk_temp_property_firstvalue_update_boundary.sql

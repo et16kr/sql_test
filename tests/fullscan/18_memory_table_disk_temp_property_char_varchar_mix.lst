@@ -1,0 +1,202 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Validate disk sort/group behavior on memory table with CHAR(>16) + VARCHAR mix.
+iSQL> -- Checks:
+iSQL> --   1) table is created without TABLESPACE clause (memory table path)
+iSQL> --   2) __OPTIMIZER_DEFAULT_TEMP_TBS_TYPE = 2 is applied
+iSQL> --   3) GROUP BY and ORDER BY with mixed fixed/variable columns return deterministic results
+iSQL> --   4) property is reset to default (0) at end
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> ALTER SYSTEM SET __OPTIMIZER_DEFAULT_TEMP_TBS_TYPE = 2;
+Alter success.
+iSQL> SELECT CASE
+           WHEN MEMORY_VALUE1 = '2' THEN 1 ELSE 0
+       END AS PASS_PROP_SET
+  FROM X$PROPERTY
+ WHERE NAME = '__OPTIMIZER_DEFAULT_TEMP_TBS_TYPE';
+PASS_PROP_SET 
+----------------
+1           
+1 row selected.
+iSQL> CREATE TABLE DST_COV_FS18_MEM_MIX
+(
+    ID       INTEGER,
+    C1       CHAR(32),
+    V1       VARCHAR(3200),
+    V2       VARCHAR(256)
+);
+Create success.
+iSQL> INSERT INTO DST_COV_FS18_MEM_MIX
+SELECT LEVEL,
+       RPAD(CHR(65 + MOD(LEVEL, 26)), 32, CHR(65 + MOD(LEVEL, 26))),
+       CASE MOD(LEVEL, 3)
+            WHEN 0 THEN RPAD('A' || TO_CHAR(LEVEL), 17, 'A')
+            WHEN 1 THEN RPAD('B' || TO_CHAR(LEVEL), 33, 'B')
+            ELSE RPAD('C' || TO_CHAR(LEVEL), 3000, 'C')
+       END,
+       RPAD('S' || TO_CHAR(MOD(LEVEL, 151)), 200, 'S')
+  FROM DUAL
+CONNECT BY LEVEL <= 6000;
+6000 rows inserted.
+iSQL> SELECT C1,
+       CNT_V,
+       MIN_L1,
+       MAX_L1
+  FROM (
+        SELECT C1,
+               COUNT(*) AS CNT_V,
+               MIN(LENGTH(V1)) AS MIN_L1,
+               MAX(LENGTH(V1)) AS MAX_L1
+          FROM DST_COV_FS18_MEM_MIX
+         GROUP BY C1
+       ) G
+ ORDER BY C1
+ LIMIT 12;
+C1                                CNT_V                MIN_L1               
+--------------------------------------------------------------------------------
+MAX_L1               
+-----------------------
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  230                  17                   
+3000                 
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB  231                  17                   
+3000                 
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC  231                  17                   
+3000                 
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD  231                  17                   
+3000                 
+EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE  231                  17                   
+3000                 
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF  231                  17                   
+3000                 
+GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG  231                  17                   
+3000                 
+HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH  231                  17                   
+3000                 
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII  231                  17                   
+3000                 
+JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ  231                  17                   
+3000                 
+KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK  231                  17                   
+3000                 
+LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL  231                  17                   
+3000                 
+12 rows selected.
+iSQL> SELECT ID,
+       C1
+  FROM DST_COV_FS18_MEM_MIX
+ ORDER BY C1, V2 DESC, ID
+ LIMIT 40;
+ID          C1                                
+-------------------------------------------------
+1066        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+4992        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+3874        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+702         AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+4628        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+1456        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+5382        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+2210        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+2964        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+3718        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+546         AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+4472        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+1300        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+5226        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+2054        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+5980        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+2808        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+1820        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+5746        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+3562        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+390         AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+4316        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+1144        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+5070        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+1898        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+5824        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+2652        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+3406        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+234         AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+4160        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+988         AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+4914        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+1742        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+5668        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+2496        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+2574        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+3250        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+78          AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+4004        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+832         AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+40 rows selected.
+iSQL> SELECT CASE
+           WHEN (
+                SELECT COUNT(*)
+                  FROM (
+                        SELECT C1
+                          FROM DST_COV_FS18_MEM_MIX
+                         GROUP BY C1
+                       ) G
+                ) = 26
+           THEN 1 ELSE 0
+       END AS PASS_GROUP_CNT
+  FROM DUAL;
+PASS_GROUP_CNT 
+-----------------
+1           
+1 row selected.
+iSQL> SELECT CASE
+           WHEN (
+                SELECT SUM(CNT_V)
+                  FROM (
+                        SELECT C1, COUNT(*) AS CNT_V
+                          FROM DST_COV_FS18_MEM_MIX
+                         GROUP BY C1
+                       ) G
+                ) = 6000
+           THEN 1 ELSE 0
+       END AS PASS_ROW_SUM
+  FROM DUAL;
+PASS_ROW_SUM 
+---------------
+1           
+1 row selected.
+iSQL> SELECT CASE
+           WHEN (
+                SELECT COUNT(*)
+                  FROM (
+                        SELECT C1,
+                               MIN(LENGTH(V1)) AS MIN_L1,
+                               MAX(LENGTH(V1)) AS MAX_L1
+                          FROM DST_COV_FS18_MEM_MIX
+                         GROUP BY C1
+                       ) G
+                 WHERE MIN_L1 = 17
+                   AND MAX_L1 = 3000
+                ) = 26
+           THEN 1 ELSE 0
+       END AS PASS_LEN_BOUNDARY
+  FROM DUAL;
+PASS_LEN_BOUNDARY 
+--------------------
+1           
+1 row selected.
+iSQL> ALTER SYSTEM SET __OPTIMIZER_DEFAULT_TEMP_TBS_TYPE = 0;
+Alter success.
+iSQL> SELECT CASE
+           WHEN MEMORY_VALUE1 = '0' THEN 1 ELSE 0
+       END AS PASS_PROP_RESET
+  FROM X$PROPERTY
+ WHERE NAME = '__OPTIMIZER_DEFAULT_TEMP_TBS_TYPE';
+PASS_PROP_RESET 
+------------------
+1           
+1 row selected.
+iSQL> DROP TABLE DST_COV_FS18_MEM_MIX;
+Drop success.

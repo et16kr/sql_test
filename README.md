@@ -68,16 +68,16 @@ SQL 파일에서 줄 시작이 `--+` 인 라인은 러너가 먼저 해석하는
 - `--+SET_ENV <KEY>=<VALUE>;`
 - `--+UNSET_ENV <KEY>;`
 - `--+TIMEOUT_SEC <n>;`
-- `--+SKIP BEGIN;`
-- `--+SKIP END;`
+- `--+SKIP_BEGIN;`
+- `--+SKIP_END;`
 
 주의사항:
 
 - 디렉티브는 반드시 줄 시작이 `--+` 이어야 합니다.
 - `SYSTEM`/`SET_ENV`/`UNSET_ENV` 는 반드시 `;` 로 끝나야 합니다.
 - `TIMEOUT_SEC` 는 초 단위 정수(`> 0`)여야 하며 `;` 로 끝나야 합니다.
-- `SKIP` 문법은 공백 포함한 `SKIP BEGIN;` / `SKIP END;` 만 허용됩니다.
-- `SKIP_BEGIN`, `SKIP_END` 같은 형태는 지원하지 않습니다.
+- `SKIP` 문법은 `SKIP_BEGIN;` / `SKIP_END;` 만 허용됩니다.
+- `SKIP BEGIN;`, `SKIP END;` 같은 형태는 지원하지 않습니다.
 
 예시:
 
@@ -85,9 +85,9 @@ SQL 파일에서 줄 시작이 `--+` 인 라인은 러너가 먼저 해석하는
 --+SET_ENV ALTIBASE_PORT_NO=17730;
 --+TIMEOUT_SEC 600;
 --+SYSTEM server start;
---+SKIP BEGIN;
+--+SKIP_BEGIN;
 drop table t1;
---+SKIP END;
+--+SKIP_END;
 ```
 
 ### 3.2 `.ts`에서 케이스별 timeout 지정

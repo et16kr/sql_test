@@ -5,9 +5,9 @@
 --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
 --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
 
---+SKIP BEGIN;
+--+SKIP_BEGIN;
 DROP TABLE DST_COV_FS09;
---+SKIP END;
+--+SKIP_END;
 
 CREATE TABLE DST_COV_FS09
 (

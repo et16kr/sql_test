@@ -2,3 +2,4 @@
 08_packed_manykeys_chained.sql
 09_nonpacked_hash_baseline.sql
 14_var_update_reject_probe.sql
+15_memory_table_disk_temp_property_group_hash_varupdate.sql

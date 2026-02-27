@@ -110,15 +110,15 @@ def parse_sql_file(sql_path: str) -> ParseResult:
                     continue
                 timeout_sec_override = parsed
 
-            elif body_upper == "SKIP BEGIN;":
+            elif body_upper == "SKIP_BEGIN;":
                 if in_skip:
-                    issues.append(ParseIssue(path=path, reason=REASON_PARSE_ERROR, detail=f"line {lineno}: nested SKIP BEGIN not supported"))
+                    issues.append(ParseIssue(path=path, reason=REASON_PARSE_ERROR, detail=f"line {lineno}: nested SKIP_BEGIN not supported"))
                 else:
                     in_skip = True
 
-            elif body_upper == "SKIP END;":
+            elif body_upper == "SKIP_END;":
                 if not in_skip:
-                    issues.append(ParseIssue(path=path, reason=REASON_PARSE_ERROR, detail=f"line {lineno}: SKIP END without BEGIN"))
+                    issues.append(ParseIssue(path=path, reason=REASON_PARSE_ERROR, detail=f"line {lineno}: SKIP_END without SKIP_BEGIN"))
                 else:
                     in_skip = False
 
@@ -131,7 +131,7 @@ def parse_sql_file(sql_path: str) -> ParseResult:
         pre_lines.append(raw)
 
     if in_skip:
-        issues.append(ParseIssue(path=path, reason=REASON_PARSE_ERROR, detail="SKIP BEGIN without matching SKIP END"))
+        issues.append(ParseIssue(path=path, reason=REASON_PARSE_ERROR, detail="SKIP_BEGIN without matching SKIP_END"))
 
     return ParseResult(
         preprocessed_sql="".join(pre_lines),

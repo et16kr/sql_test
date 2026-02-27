@@ -1,3 +1,4 @@
 01_packed_group_insert_scan.sql
 02_packed_distinct_same_len.sql
 03_packed_distinct_prefix_len.sql
+04_memory_table_disk_temp_property_distinct_hash.sql
