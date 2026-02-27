@@ -25,7 +25,15 @@ from .recovery import recover_with_clean_and_start
 from .reporter import format_case_line, run_result_to_dict, summarize, write_json
 from .suite_parser import parse_suite
 from .triage import generate_triage
-from .utils import ensure_dir, make_run_id, now_utc_iso, repo_relpath
+from .utils import (
+    ConcurrentRunError,
+    acquire_run_lock,
+    ensure_dir,
+    make_run_id,
+    now_utc_iso,
+    release_run_lock,
+    repo_relpath,
+)
 
 
 class RunnerContext:
@@ -502,191 +510,206 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 1
 
     run_id = make_run_id()
-    started_at = now_utc_iso()
-    run_dir = str(Path(opts.out_dir, "runs", run_id))
-    out_actual = str(Path(opts.out_dir, "actual"))
-    ensure_dir(run_dir)
-    ensure_dir(out_actual)
-
-    ctx = RunnerContext(options=opts, run_id=run_id, run_dir=run_dir, suite_abs=suite_abs)
-
-    target_path = Path(suite_abs)
-    if target_path.suffix.lower() == ".sql":
-        sql_paths = [str(target_path.resolve())]
-        parse_issues = []
-        ts_trace = []
-        sql_sources = [""]
-        ts_parent_map_abs: Dict[str, str] = {}
-        sql_timeout_map_abs: Dict[str, int] = {}
-    elif target_path.suffix.lower() == ".ts":
-        sql_paths, parse_issues, ts_trace, sql_sources, ts_parent_map_abs, sql_timeout_map_abs = parse_suite(
-            suite_abs, opts.repo_root
+    lock_path = str(Path(opts.out_dir, ".altitest.lock").resolve())
+    lock_holder = f"pid={os.getpid()} run_id={run_id} suite={suite_abs}"
+    try:
+        lock_fp = acquire_run_lock(lock_path, lock_holder)
+    except ConcurrentRunError as exc:
+        holder_info = f"; holder={exc.holder}" if exc.holder else ""
+        print(
+            f"another altitest run is already in progress (lock: {exc.lock_path}{holder_info})",
+            file=sys.stderr,
         )
-    else:
-        print("input must be .ts or .sql", file=sys.stderr)
         return 1
 
-    ts_trace_rel = [_to_rel_path_safe(p, opts.repo_root) for p in ts_trace]
-    sql_owner_map_abs: Dict[str, str] = {}
-    for sql, owner in zip(sql_paths, sql_sources):
-        sql_key = str(Path(sql).resolve())
-        owner_abs = str(Path(owner).resolve()) if owner else ""
-        sql_owner_map_abs[sql_key] = owner_abs
-    plans = build_case_plans(sql_paths, opts.repo_root, out_actual, sql_timeout_map=sql_timeout_map_abs)
-    plans = _filter_case_plans(plans, opts.case_filter)
+    try:
+        started_at = now_utc_iso()
+        run_dir = str(Path(opts.out_dir, "runs", run_id))
+        out_actual = str(Path(opts.out_dir, "actual"))
+        ensure_dir(run_dir)
+        ensure_dir(out_actual)
 
-    results: List[CaseResult] = []
-    stop_code = 0
-    stopped_by_fatal = False
-    stopped_by_error = False
-    stopped_case_index = 0
-    current_ts_chain: List[str] = []
+        ctx = RunnerContext(options=opts, run_id=run_id, run_dir=run_dir, suite_abs=suite_abs)
 
-    _run_pre_suite_actions(ctx)
+        target_path = Path(suite_abs)
+        if target_path.suffix.lower() == ".sql":
+            sql_paths = [str(target_path.resolve())]
+            parse_issues = []
+            ts_trace = []
+            sql_sources = [""]
+            ts_parent_map_abs: Dict[str, str] = {}
+            sql_timeout_map_abs: Dict[str, int] = {}
+        elif target_path.suffix.lower() == ".ts":
+            sql_paths, parse_issues, ts_trace, sql_sources, ts_parent_map_abs, sql_timeout_map_abs = parse_suite(
+                suite_abs, opts.repo_root
+            )
+        else:
+            print("input must be .ts or .sql", file=sys.stderr)
+            return 1
 
-    for plan in plans:
-        _run_pre_case_actions(ctx)
+        ts_trace_rel = [_to_rel_path_safe(p, opts.repo_root) for p in ts_trace]
+        sql_owner_map_abs: Dict[str, str] = {}
+        for sql, owner in zip(sql_paths, sql_sources):
+            sql_key = str(Path(sql).resolve())
+            owner_abs = str(Path(owner).resolve()) if owner else ""
+            sql_owner_map_abs[sql_key] = owner_abs
+        plans = build_case_plans(sql_paths, opts.repo_root, out_actual, sql_timeout_map=sql_timeout_map_abs)
+        plans = _filter_case_plans(plans, opts.case_filter)
 
-        owner_abs = sql_owner_map_abs.get(str(Path(plan.sql_path).resolve()), "")
-        owner_chain = _build_ts_chain(owner_abs, ts_parent_map_abs, opts.repo_root)
-        if owner_chain != current_ts_chain:
-            if current_ts_chain:
-                print("")
-            common = 0
-            for left, right in zip(current_ts_chain, owner_chain):
-                if left != right:
-                    break
-                common += 1
-            for depth in range(common, len(owner_chain)):
-                ts_rel = owner_chain[depth]
-                print(f"{'  ' * depth}{ts_rel}")
-            current_ts_chain = owner_chain
+        results: List[CaseResult] = []
+        stop_code = 0
+        stopped_by_fatal = False
+        stopped_by_error = False
+        stopped_case_index = 0
+        current_ts_chain: List[str] = []
 
-        case_result = _run_case(ctx, plan)
-        case_result.sql = repo_relpath(case_result.sql, opts.repo_root)
-        case_result.lst = case_result.lst
-        case_result.out = case_result.out
-        case_result.err = case_result.err
-        results.append(case_result)
+        _run_pre_suite_actions(ctx)
 
-        sql_indent = "  " * len(owner_chain)
-        print(f"{sql_indent}{format_case_line(case_result.sql, case_result.status)}")
-        if case_result.status in {config.STATUS_ERROR, config.STATUS_FATAL} and case_result.analysis_hint:
-            print(f"{sql_indent}  -> {case_result.analysis_hint}")
+        for plan in plans:
+            _run_pre_case_actions(ctx)
 
-        if case_result.status == config.STATUS_ERROR and not opts.continue_on_error:
-            stopped_by_error = True
-            stopped_case_index = case_result.index
-            stop_code = 1
-            break
-
-        if case_result.status == config.STATUS_FATAL:
-            stopped_by_fatal = True
-            stopped_case_index = case_result.index
-            if opts.fatal_recover:
-                recovered = False
-                fatal_reason = case_result.reason
-                for _ in range(opts.fatal_recover_max):
-                    ok_recover, _ = recover_with_clean_and_start(ctx.base_env, opts.timeout_sec)
-                    if ok_recover:
-                        recovered = True
+            owner_abs = sql_owner_map_abs.get(str(Path(plan.sql_path).resolve()), "")
+            owner_chain = _build_ts_chain(owner_abs, ts_parent_map_abs, opts.repo_root)
+            if owner_chain != current_ts_chain:
+                if current_ts_chain:
+                    print("")
+                common = 0
+                for left, right in zip(current_ts_chain, owner_chain):
+                    if left != right:
                         break
-                if not recovered:
-                    case_result.analysis_hint = (
-                        f"FATAL recovery failed after {opts.fatal_recover_max} attempt(s); cause={fatal_reason}"
-                    )
-                    case_result.reason = config.REASON_FATAL_RECOVERY_FAILED
-                    stop_code = 3
-                    break
-            else:
-                stop_code = 2
+                    common += 1
+                for depth in range(common, len(owner_chain)):
+                    ts_rel = owner_chain[depth]
+                    print(f"{'  ' * depth}{ts_rel}")
+                current_ts_chain = owner_chain
+
+            case_result = _run_case(ctx, plan)
+            case_result.sql = repo_relpath(case_result.sql, opts.repo_root)
+            case_result.lst = case_result.lst
+            case_result.out = case_result.out
+            case_result.err = case_result.err
+            results.append(case_result)
+
+            sql_indent = "  " * len(owner_chain)
+            print(f"{sql_indent}{format_case_line(case_result.sql, case_result.status)}")
+            if case_result.status in {config.STATUS_ERROR, config.STATUS_FATAL} and case_result.analysis_hint:
+                print(f"{sql_indent}  -> {case_result.analysis_hint}")
+
+            if case_result.status == config.STATUS_ERROR and not opts.continue_on_error:
+                stopped_by_error = True
+                stopped_case_index = case_result.index
+                stop_code = 1
                 break
 
-    next_index = max([p.index for p in plans], default=0) + 1
-    for issue in parse_issues:
-        issue_sql = issue.path
-        if Path(issue_sql).exists():
-            try:
-                issue_sql = repo_relpath(issue_sql, opts.repo_root)
-            except Exception:
-                pass
-        results.append(_make_error_result(next_index, issue_sql, issue.reason, issue.detail, suite_abs))
-        next_index += 1
+            if case_result.status == config.STATUS_FATAL:
+                stopped_by_fatal = True
+                stopped_case_index = case_result.index
+                if opts.fatal_recover:
+                    recovered = False
+                    fatal_reason = case_result.reason
+                    for _ in range(opts.fatal_recover_max):
+                        ok_recover, _ = recover_with_clean_and_start(ctx.base_env, opts.timeout_sec)
+                        if ok_recover:
+                            recovered = True
+                            break
+                    if not recovered:
+                        case_result.analysis_hint = (
+                            f"FATAL recovery failed after {opts.fatal_recover_max} attempt(s); cause={fatal_reason}"
+                        )
+                        case_result.reason = config.REASON_FATAL_RECOVERY_FAILED
+                        stop_code = 3
+                        break
+                else:
+                    stop_code = 2
+                    break
 
-    _accept_results(results, opts)
+        next_index = max([p.index for p in plans], default=0) + 1
+        for issue in parse_issues:
+            issue_sql = issue.path
+            if Path(issue_sql).exists():
+                try:
+                    issue_sql = repo_relpath(issue_sql, opts.repo_root)
+                except Exception:
+                    pass
+            results.append(_make_error_result(next_index, issue_sql, issue.reason, issue.detail, suite_abs))
+            next_index += 1
 
-    ended_at = now_utc_iso()
-    summary = summarize(results, total=len(plans) + len(parse_issues))
-    run_state = {
-        "stopped_by_fatal": bool(stopped_by_fatal),
-        "stopped_by_error": bool(stopped_by_error),
-        "stopped_case_index": int(stopped_case_index),
-        "suite_ts_trace": ts_trace_rel,
-        "suite_sql_sources": {
-            _to_rel_path_safe(sql, opts.repo_root): _to_rel_path_safe(owner, opts.repo_root)
-            for sql, owner in zip(sql_paths, sql_sources)
-        },
-        "suite_sql_timeouts": {
-            _to_rel_path_safe(sql, opts.repo_root): timeout
-            for sql, timeout in sql_timeout_map_abs.items()
-        },
-        "suite_ts_parents": {
-            _to_rel_path_safe(child, opts.repo_root): _to_rel_path_safe(parent, opts.repo_root)
-            for child, parent in ts_parent_map_abs.items()
-        },
-    }
+        _accept_results(results, opts)
 
-    run_result = RunResult(
-        schema_version=1,
-        run_id=run_id,
-        suite=suite_abs,
-        started_at=started_at,
-        ended_at=ended_at,
-        options={
-            "server_mode": opts.server_mode,
-            "clean_mode": opts.clean_mode,
-            "allow_clean": opts.allow_clean,
-            "timeout_sec": opts.timeout_sec,
-            "fatal_recover": opts.fatal_recover,
-            "fatal_recover_max": opts.fatal_recover_max,
-            "diff_tool": opts.diff_tool,
-            "order_check": opts.order_check,
-            "order_is_pass": opts.order_is_pass,
-            "continue_on_error": opts.continue_on_error,
-            "raw_diff": opts.raw_diff,
-            "accept_out": opts.accept_out,
-            "accept_missing_only": opts.accept_missing_only,
-            "case_filter": opts.case_filter,
-            "open_viewdiff": opts.open_viewdiff,
-            "ui": opts.ui,
-            "yes": opts.yes,
-            "non_interactive": opts.non_interactive,
-            "ai_report": opts.ai_report,
-        },
-        summary=summary,
-        results=results,
-        run_state=run_state,
-    )
+        ended_at = now_utc_iso()
+        summary = summarize(results, total=len(plans) + len(parse_issues))
+        run_state = {
+            "stopped_by_fatal": bool(stopped_by_fatal),
+            "stopped_by_error": bool(stopped_by_error),
+            "stopped_case_index": int(stopped_case_index),
+            "suite_ts_trace": ts_trace_rel,
+            "suite_sql_sources": {
+                _to_rel_path_safe(sql, opts.repo_root): _to_rel_path_safe(owner, opts.repo_root)
+                for sql, owner in zip(sql_paths, sql_sources)
+            },
+            "suite_sql_timeouts": {
+                _to_rel_path_safe(sql, opts.repo_root): timeout
+                for sql, timeout in sql_timeout_map_abs.items()
+            },
+            "suite_ts_parents": {
+                _to_rel_path_safe(child, opts.repo_root): _to_rel_path_safe(parent, opts.repo_root)
+                for child, parent in ts_parent_map_abs.items()
+            },
+        }
 
-    run_json_dict = run_result_to_dict(run_result)
-    run_json_path = str(Path(run_dir, "run.json"))
-    write_json(run_json_path, run_json_dict)
-    write_json(str(Path(opts.out_dir, "last_run.json")), run_json_dict)
+        run_result = RunResult(
+            schema_version=1,
+            run_id=run_id,
+            suite=suite_abs,
+            started_at=started_at,
+            ended_at=ended_at,
+            options={
+                "server_mode": opts.server_mode,
+                "clean_mode": opts.clean_mode,
+                "allow_clean": opts.allow_clean,
+                "timeout_sec": opts.timeout_sec,
+                "fatal_recover": opts.fatal_recover,
+                "fatal_recover_max": opts.fatal_recover_max,
+                "diff_tool": opts.diff_tool,
+                "order_check": opts.order_check,
+                "order_is_pass": opts.order_is_pass,
+                "continue_on_error": opts.continue_on_error,
+                "raw_diff": opts.raw_diff,
+                "accept_out": opts.accept_out,
+                "accept_missing_only": opts.accept_missing_only,
+                "case_filter": opts.case_filter,
+                "open_viewdiff": opts.open_viewdiff,
+                "ui": opts.ui,
+                "yes": opts.yes,
+                "non_interactive": opts.non_interactive,
+                "ai_report": opts.ai_report,
+            },
+            summary=summary,
+            results=results,
+            run_state=run_state,
+        )
 
-    if opts.ai_report:
-        generate_triage(run_json_dict, run_dir)
+        run_json_dict = run_result_to_dict(run_result)
+        run_json_path = str(Path(run_dir, "run.json"))
+        write_json(run_json_path, run_json_dict)
+        write_json(str(Path(opts.out_dir, "last_run.json")), run_json_dict)
 
-    issue_exists = any(r.status in config.ISSUE_STATUSES for r in results)
-    if opts.open_viewdiff and issue_exists:
-        _run_open_viewdiff(opts, run_json_path)
+        if opts.ai_report:
+            generate_triage(run_json_dict, run_dir)
 
-    exit_code = _derive_exit_code(results, opts, stop_code)
+        issue_exists = any(r.status in config.ISSUE_STATUSES for r in results)
+        if opts.open_viewdiff and issue_exists:
+            _run_open_viewdiff(opts, run_json_path)
 
-    print("\nSummary:")
-    for key in ["total", "executed", "not_run", "pass", "order", "fail", "error", "fatal"]:
-        print(f"  {key}: {summary.get(key, 0)}")
+        exit_code = _derive_exit_code(results, opts, stop_code)
 
-    return exit_code
+        print("\nSummary:")
+        for key in ["total", "executed", "not_run", "pass", "order", "fail", "error", "fatal"]:
+            print(f"  {key}: {summary.get(key, 0)}")
+
+        return exit_code
+    finally:
+        release_run_lock(lock_fp)
 
 
 if __name__ == "__main__":
