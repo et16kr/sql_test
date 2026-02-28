@@ -1,8 +1,17 @@
     --+SET_ENV ALTIBASE_SYS_TEMP_FILE_INIT_SIZE=1048576;
     --+SYSTEM clean;
     --+SYSTEM server start;
+    connect SYS/MANAGER;
 
     create tablespace TBS1 datafile 'tbs1.dbf' size 1M autoextend on maxsize 1G;
+    create temporary tablespace DST_COV_FS15_UTMP
+        tempfile 'dst_cov_fs15_utmp.dbf' size 1M
+        autoextend on next 1M maxsize 4G;
+    create user DST_COV_FS15_U identified by DST_COV_FS15_U
+        default tablespace TBS1
+        temporary tablespace DST_COV_FS15_UTMP;
+    alter system set __TEMP_ROW_FORMAT_MODE = 2;
+    connect DST_COV_FS15_U/DST_COV_FS15_U;
 
     CREATE TABLE T1
     (
@@ -166,7 +175,7 @@
     FRST_REG_DT                 DATE DEFAULT SYSDATE NOT NULL,
     LAST_MDFR_ID                VARCHAR(50) DEFAULT 'admin' NOT NULL,
     LAST_MDFCN_DT               DATE DEFAULT SYSDATE NOT NULL
-    ) TABLESPACE SYS_TBS_DISK_DATA;
+    ) TABLESPACE TBS1;
 
     INSERT INTO  T0
     SELECT
@@ -252,7 +261,6 @@
     FROM DUAL
     CONNECT BY LEVEL <= 100000;
 
-    alter system set __TEMP_ROW_FORMAT_MODE = 2;
 set timing on;
 
 INSERT INTO T1
@@ -341,18 +349,22 @@ INSERT INTO T1
     WHERE SEQNO =1;
 set timing off;
     select
-        case when t.p4 < (t.p5 * 2) then 1 else 0 end as is_gt
+        case when t.temp_pages < (t.data_pages * 2) then 1 else 0 end as is_gt
     from (
         select
-            max(case when id = 4 then total_page_count end) as p4,
-            max(case when id = 5 then total_page_count end) as p5
-        from x$tablespaces
-        where id > 3
+            max(case when name = 'DST_COV_FS15_UTMP' then total_page_count end) as temp_pages,
+            max(case when name = 'TBS1' then total_page_count end) as data_pages
+        from v$tablespaces
     ) t;
 
-    select id, total_page_count from x$tablespaces where id > 3;
+    select name, total_page_count
+      from v$tablespaces
+     where name in ('DST_COV_FS15_UTMP', 'TBS1')
+     order by name;
 
     DROP TABLE T0;
     DROP TABLE T1;
+    connect SYS/MANAGER;
+    DROP USER DST_COV_FS15_U CASCADE;
+    DROP TABLESPACE DST_COV_FS15_UTMP INCLUDING CONTENTS AND DATAFILES;
     DROP TABLESPACE TBS1 INCLUDING CONTENTS AND DATAFILES;
-
