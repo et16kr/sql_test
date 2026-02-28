@@ -8,9 +8,13 @@ from typing import List, Optional, Sequence, Tuple
 
 
 _VOLATILE_LINE_PATTERNS: Sequence[re.Pattern[str]] = (
-    re.compile(r"^\s*elapsed\s+time\s*:\s*.+$", re.IGNORECASE),
+    re.compile(r"^\s*(?:iSQL>\s*)?(?:elapsed|query)\s+time\s*[:=]\s*.+$", re.IGNORECASE),
+    re.compile(r"^\s*[-]{5,}\s*$", re.IGNORECASE),
+    re.compile(r"^\s*Altibase\s+Client\s+Query\s+utility\.?\s*$", re.IGNORECASE),
     re.compile(r"^\s*Release\s+Version\b.*$", re.IGNORECASE),
-    re.compile(r"^\s*ISQL_CONNECTION\s*=.*PORT_NO\s*=.*$", re.IGNORECASE),
+    re.compile(r"^\s*Copyright\b.*$", re.IGNORECASE),
+    re.compile(r"^\s*All\s+Rights\s+Reserved\.?\s*$", re.IGNORECASE),
+    re.compile(r"^\s*(?:iSQL>\s*)?ISQL_CONNECTION\b.*$", re.IGNORECASE),
 )
 
 
