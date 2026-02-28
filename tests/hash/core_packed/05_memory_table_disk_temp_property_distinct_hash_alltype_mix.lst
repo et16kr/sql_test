@@ -1,0 +1,185 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 20300
+iSQL> -- Test Purpose: Validate DISTINCT_HASH on mixed variable column types.
+iSQL> -- Coverage Types:
+iSQL> --   VARCHAR, NVARCHAR, CHAR, NCHAR, NUMERIC, NUMBER, FLOAT,
+iSQL> --   VARBYTE, VARBIT, BYTE, NIBBLE, BIT
+iSQL> -- Checks:
+iSQL> --   1) __OPTIMIZER_DEFAULT_TEMP_TBS_TYPE = 2 is applied
+iSQL> --   2) DISTINCT_HASH returns expected unique count
+iSQL> --   3) property reset to default (0)
+iSQL> ALTER SYSTEM SET __OPTIMIZER_DEFAULT_TEMP_TBS_TYPE = 2;
+Alter success.
+iSQL> SELECT CASE
+           WHEN MEMORY_VALUE1 = '2' THEN 1 ELSE 0
+       END AS PASS_PROP_SET
+  FROM X$PROPERTY
+ WHERE NAME = '__OPTIMIZER_DEFAULT_TEMP_TBS_TYPE';
+PASS_PROP_SET 
+----------------
+1           
+1 row selected.
+iSQL> CREATE TABLE DHASH_COV05_ALLTYPE
+(
+    ID         INTEGER,
+    C_VARCHAR  VARCHAR(256),
+    C_NVARCHAR NVARCHAR(256),
+    C_CHAR     CHAR(32),
+    C_NCHAR    NCHAR(32),
+    C_NUMERIC  NUMERIC(20,6),
+    C_NUMBER   NUMBER,
+    C_FLOAT    FLOAT,
+    C_VARBYTE  VARBYTE(64),
+    C_VARBIT   VARBIT(64),
+    C_BYTE     BYTE(64),
+    C_NIBBLE   NIBBLE(64),
+    C_BIT      BIT(64)
+);
+Create success.
+iSQL> INSERT INTO DHASH_COV05_ALLTYPE
+SELECT LEVEL,
+       'K' || LPAD(TO_CHAR(MOD(LEVEL, 257)), 4, '0'),
+       'N' || LPAD(TO_CHAR(MOD(LEVEL, 257)), 4, '0'),
+       RPAD('C' || TO_CHAR(MOD(LEVEL, 257)), 32, 'C'),
+       RPAD('D' || TO_CHAR(MOD(LEVEL, 257)), 32, 'D'),
+       TO_NUMBER(MOD(LEVEL, 257)) / 13,
+       TO_NUMBER(MOD(LEVEL, 257)) / 17,
+       TO_NUMBER(MOD(LEVEL, 257)) / 19,
+       NULL,
+       NULL,
+       NULL,
+       NULL,
+       NULL
+  FROM DUAL
+CONNECT BY LEVEL <= 9000;
+9000 rows inserted.
+iSQL> SELECT /*+ DISTINCT_HASH */
+       COUNT(*) AS DISTINCT_CNT
+  FROM (
+        SELECT DISTINCT C_VARCHAR,
+                        C_NVARCHAR,
+                        C_CHAR,
+                        C_NCHAR,
+                        C_NUMERIC,
+                        C_NUMBER,
+                        C_FLOAT,
+                        C_VARBYTE,
+                        C_VARBIT,
+                        C_BYTE,
+                        C_NIBBLE,
+                        C_BIT
+          FROM DHASH_COV05_ALLTYPE
+       ) D;
+DISTINCT_CNT         
+-----------------------
+257                  
+1 row selected.
+iSQL> SELECT /*+ DISTINCT_HASH */
+       C_VARCHAR,
+       C_NVARCHAR
+  FROM (
+        SELECT DISTINCT C_VARCHAR,
+                        C_NVARCHAR,
+                        C_CHAR,
+                        C_NCHAR,
+                        C_NUMERIC,
+                        C_NUMBER,
+                        C_FLOAT,
+                        C_VARBYTE,
+                        C_VARBIT,
+                        C_BYTE,
+                        C_NIBBLE,
+                        C_BIT
+          FROM DHASH_COV05_ALLTYPE
+       ) D
+ ORDER BY C_VARCHAR
+ LIMIT 20;
+C_VARCHAR                                                                                                                                                                                                                                                         
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+C_NVARCHAR                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+K0000                                                                                                                                                                                                                                                             
+N0000                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+K0001                                                                                                                                                                                                                                                             
+N0001                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+K0002                                                                                                                                                                                                                                                             
+N0002                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+K0003                                                                                                                                                                                                                                                             
+N0003                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+K0004                                                                                                                                                                                                                                                             
+N0004                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+K0005                                                                                                                                                                                                                                                             
+N0005                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+K0006                                                                                                                                                                                                                                                             
+N0006                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+K0007                                                                                                                                                                                                                                                             
+N0007                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+K0008                                                                                                                                                                                                                                                             
+N0008                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+K0009                                                                                                                                                                                                                                                             
+N0009                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+K0010                                                                                                                                                                                                                                                             
+N0010                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+K0011                                                                                                                                                                                                                                                             
+N0011                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+K0012                                                                                                                                                                                                                                                             
+N0012                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+K0013                                                                                                                                                                                                                                                             
+N0013                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+K0014                                                                                                                                                                                                                                                             
+N0014                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+K0015                                                                                                                                                                                                                                                             
+N0015                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+K0016                                                                                                                                                                                                                                                             
+N0016                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+K0017                                                                                                                                                                                                                                                             
+N0017                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+K0018                                                                                                                                                                                                                                                             
+N0018                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+K0019                                                                                                                                                                                                                                                             
+N0019                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+20 rows selected.
+iSQL> SELECT CASE
+           WHEN (
+                SELECT /*+ DISTINCT_HASH */ COUNT(*)
+                  FROM (
+                        SELECT DISTINCT C_VARCHAR,
+                                        C_NVARCHAR,
+                                        C_CHAR,
+                                        C_NCHAR,
+                                        C_NUMERIC,
+                                        C_NUMBER,
+                                        C_FLOAT,
+                                        C_VARBYTE,
+                                        C_VARBIT,
+                                        C_BYTE,
+                                        C_NIBBLE,
+                                        C_BIT
+                          FROM DHASH_COV05_ALLTYPE
+                       ) X
+                ) = 257
+           THEN 1 ELSE 0
+       END AS PASS_DISTINCT_CNT
+  FROM DUAL;
+PASS_DISTINCT_CNT 
+--------------------
+1           
+1 row selected.
+iSQL> ALTER SYSTEM SET __OPTIMIZER_DEFAULT_TEMP_TBS_TYPE = 0;
+Alter success.
+iSQL> SELECT CASE
+           WHEN MEMORY_VALUE1 = '0' THEN 1 ELSE 0
+       END AS PASS_PROP_RESET
+  FROM X$PROPERTY
+ WHERE NAME = '__OPTIMIZER_DEFAULT_TEMP_TBS_TYPE';
+PASS_PROP_RESET 
+------------------
+1           
+1 row selected.
+iSQL> DROP TABLE DHASH_COV05_ALLTYPE;
+Drop success.

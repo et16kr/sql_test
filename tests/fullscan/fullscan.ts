@@ -16,3 +16,4 @@
 16_temp_row_mode2_wide_payload.sql | timeout_sec=600
 17_memory_table_disk_temp_property.sql
 18_memory_table_disk_temp_property_char_varchar_mix.sql
+19_memory_table_disk_temp_property_alltype_mix.sql

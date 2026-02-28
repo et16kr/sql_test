@@ -2,3 +2,4 @@
 02_packed_distinct_same_len.sql
 03_packed_distinct_prefix_len.sql
 04_memory_table_disk_temp_property_distinct_hash.sql
+05_memory_table_disk_temp_property_distinct_hash_alltype_mix.sql
