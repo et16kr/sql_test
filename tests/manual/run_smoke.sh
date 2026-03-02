@@ -5,7 +5,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
 
 export PATH="$REPO_ROOT/tests/manual/fakebin:$PATH"
-export ALTIBASE_PORT_NO="29999"
+export ALTIBASE_PORT_NO="20300"
 
 assert_json() {
   local code="$1"

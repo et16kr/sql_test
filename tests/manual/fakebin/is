@@ -17,7 +17,7 @@ if grep -q -- "--CASE:ERROR" <<<"$content"; then
 fi
 
 if grep -q -- "--CASE:FATAL_DISCONNECT" <<<"$content"; then
-  echo "ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = ${ALTIBASE_PORT_NO:-17730}"
+  echo "ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = ${ALTIBASE_PORT_NO:-20300}"
   echo "[ERR-50032 : Client unable to establish connection. (Failed to invoke the connect() system function, errno=111)]"
   exit 1
 fi

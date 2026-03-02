@@ -3,7 +3,7 @@ set -euo pipefail
 state_dir="${ALTI_FAKE_STATE_DIR:-/tmp/altitest_fake_server_${USER}}"
 mkdir -p "$state_dir"
 pid_file="$state_dir/server.pid"
-port="${ALTIBASE_PORT_NO:-17730}"
+port="${ALTIBASE_PORT_NO:-20300}"
 cmd="${1:-}"
 
 is_alive() {

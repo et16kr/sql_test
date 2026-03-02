@@ -359,7 +359,7 @@ iSQL> INSERT INTO T1
     )
     WHERE SEQNO =1;
 100000 rows inserted.
-elapsed time : 31.50
+elapsed time : 43.50
 iSQL> set timing off;
 iSQL>     select
         case when t.temp_pages < (t.data_pages * 2) then 1 else 0 end as is_gt
@@ -379,7 +379,7 @@ iSQL>     select name, total_page_count
      order by name;
 NAME                                      TOTAL_PAGE_COUNT     
 ------------------------------------------------------------------
-DST_COV_FS16_UTMP                         129792               
+DST_COV_FS16_UTMP                         130944               
 TBS1                                      268160               
 2 rows selected.
 iSQL>     DROP TABLE T0;
