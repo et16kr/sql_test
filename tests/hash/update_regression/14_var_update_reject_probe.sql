@@ -5,12 +5,12 @@
 --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
 --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
 
---+SKIP_BEGIN;
+--+SKIP BEGIN;
 DROP TABLE DHASH_COV14_VARUPD;
 DROP TABLE DHASH_COV14_TMP;
 DROP TABLE DHASH_COV14_CFG;
 DROP TABLE DHASH_COV14_RES;
---+SKIP_END;
+--+SKIP END;
 
 CREATE TABLE DHASH_COV14_CFG
 (

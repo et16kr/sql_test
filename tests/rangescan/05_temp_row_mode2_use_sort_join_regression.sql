@@ -5,10 +5,10 @@
 --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
 
 --+TIMEOUT_SEC 600;
---+SKIP_BEGIN;
+--+SKIP BEGIN;
 DROP TABLE DST_COV20_ITEM_2;
 DROP TABLE DST_COV20_STORE_SALES_2;
---+SKIP_END;
+--+SKIP END;
 
 CREATE TABLE DST_COV20_ITEM_2
 (

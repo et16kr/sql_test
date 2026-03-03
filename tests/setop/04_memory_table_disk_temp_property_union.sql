@@ -7,10 +7,10 @@
 -- Manual reference:
 --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
 
---+SKIP_BEGIN;
+--+SKIP BEGIN;
 DROP TABLE DSET_COV04_A;
 DROP TABLE DSET_COV04_B;
---+SKIP_END;
+--+SKIP END;
 
 ALTER SYSTEM SET __OPTIMIZER_DEFAULT_TEMP_TBS_TYPE = 2;
 

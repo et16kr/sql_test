@@ -5,10 +5,10 @@
 --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
 --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
 
---+SKIP_BEGIN;
+--+SKIP BEGIN;
 DROP TABLE DST_COV_RS04_A;
 DROP TABLE DST_COV_RS04_B;
---+SKIP_END;
+--+SKIP END;
 
 CREATE TABLE DST_COV_RS04_A
 (

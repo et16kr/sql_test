@@ -7,9 +7,9 @@
 --   2) DISTINCT_HASH returns expected unique count
 --   3) property reset to default (0)
 
---+SKIP_BEGIN;
+--+SKIP BEGIN;
 DROP TABLE DHASH_COV05_ALLTYPE;
---+SKIP_END;
+--+SKIP END;
 
 ALTER SYSTEM SET __OPTIMIZER_DEFAULT_TEMP_TBS_TYPE = 2;
 

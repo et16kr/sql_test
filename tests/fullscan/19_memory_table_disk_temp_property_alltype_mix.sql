@@ -9,9 +9,9 @@
 --   4) variable-length span and null payload checks are correct
 --   5) property reset to default (0)
 
---+SKIP_BEGIN;
+--+SKIP BEGIN;
 DROP TABLE DST_COV_FS19_ALLTYPE;
---+SKIP_END;
+--+SKIP END;
 
 ALTER SYSTEM SET __OPTIMIZER_DEFAULT_TEMP_TBS_TYPE = 2;
 

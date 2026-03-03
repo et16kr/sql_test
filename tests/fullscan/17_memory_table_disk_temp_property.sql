@@ -7,9 +7,9 @@
 -- Manual reference:
 --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
 
---+SKIP_BEGIN;
+--+SKIP BEGIN;
 DROP TABLE DST_COV_FS17_MEM;
---+SKIP_END;
+--+SKIP END;
 
 ALTER SYSTEM SET __OPTIMIZER_DEFAULT_TEMP_TBS_TYPE = 2;
 
