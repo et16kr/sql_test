@@ -1,0 +1,95 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Reproduce mode2 packed-row sort-join regression fixed by sdtSortModule callback row conversion.
+iSQL> -- Checks: USE_SORT join result must match baseline in both mode1 and mode2.
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DST_COV20_ITEM_2
+(
+    I_ITEM_SK   INTEGER NOT NULL,
+    I_CLASS     CHAR(50),
+    CONSTRAINT PK_DST_COV20_ITEM_2 PRIMARY KEY (I_ITEM_SK)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> CREATE TABLE DST_COV20_STORE_SALES_2
+(
+    SS_ITEM_SK        INTEGER NOT NULL,
+    SS_TICKET_NUMBER  INTEGER NOT NULL,
+    SS_SALES_PRICE    NUMERIC(7,2),
+    CONSTRAINT PK_DST_COV20_STORE_SALES_2 PRIMARY KEY (SS_ITEM_SK, SS_TICKET_NUMBER)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DST_COV20_ITEM_2
+SELECT LEVEL,
+       RPAD('CLASS' || TO_CHAR(MOD(LEVEL, 97)), 50, 'X')
+  FROM DUAL
+CONNECT BY LEVEL <= 5000;
+5000 rows inserted.
+iSQL> INSERT INTO DST_COV20_STORE_SALES_2
+SELECT MOD(LEVEL, 5000) + 1,
+       LEVEL,
+       CASE
+           WHEN MOD(LEVEL, 3) = 0 THEN NULL
+           ELSE CAST(MOD(LEVEL, 10000) / 100 AS NUMERIC(7,2))
+       END
+  FROM DUAL
+CONNECT BY LEVEL <= 250000;
+250000 rows inserted.
+iSQL> ALTER SYSTEM SET __TEMP_ROW_FORMAT_MODE = 1;
+Alter success.
+iSQL> SELECT /*+ TEMP_TBS_DISK USE_SORT(DST_COV20_ITEM_2, DST_COV20_STORE_SALES_2) NO_USE_HASH(DST_COV20_STORE_SALES_2) */
+       COUNT(*)             AS C_HINT_M1,
+       COUNT(SS_SALES_PRICE) AS C_HINT_M1_NONNULL,
+       SUM(SS_SALES_PRICE)   AS S_HINT_M1
+  FROM DST_COV20_ITEM_2,
+       DST_COV20_STORE_SALES_2
+ WHERE SS_ITEM_SK = I_ITEM_SK;
+C_HINT_M1            C_HINT_M1_NONNULL    S_HINT_M1   
+----------------------------------------------------------
+250000               166667               8332466.67  
+1 row selected.
+iSQL> SELECT COUNT(*)              AS C_BASE_M1,
+       COUNT(SS_SALES_PRICE) AS C_BASE_M1_NONNULL,
+       SUM(SS_SALES_PRICE)   AS S_BASE_M1
+  FROM DST_COV20_ITEM_2,
+       DST_COV20_STORE_SALES_2
+ WHERE SS_ITEM_SK = I_ITEM_SK;
+C_BASE_M1            C_BASE_M1_NONNULL    S_BASE_M1   
+----------------------------------------------------------
+250000               166667               8332466.67  
+1 row selected.
+iSQL> ALTER SYSTEM SET __TEMP_ROW_FORMAT_MODE = 2;
+Alter success.
+iSQL> SELECT /*+ TEMP_TBS_DISK USE_SORT(DST_COV20_ITEM_2, DST_COV20_STORE_SALES_2) NO_USE_HASH(DST_COV20_STORE_SALES_2) */
+       COUNT(*)              AS C_HINT_M2,
+       COUNT(SS_SALES_PRICE) AS C_HINT_M2_NONNULL,
+       SUM(SS_SALES_PRICE)   AS S_HINT_M2
+  FROM DST_COV20_ITEM_2,
+       DST_COV20_STORE_SALES_2
+ WHERE SS_ITEM_SK = I_ITEM_SK;
+C_HINT_M2            C_HINT_M2_NONNULL    S_HINT_M2   
+----------------------------------------------------------
+250000               166667               8332466.67  
+1 row selected.
+iSQL> SELECT COUNT(*)              AS C_BASE_M2,
+       COUNT(SS_SALES_PRICE) AS C_BASE_M2_NONNULL,
+       SUM(SS_SALES_PRICE)   AS S_BASE_M2
+  FROM DST_COV20_ITEM_2,
+       DST_COV20_STORE_SALES_2
+ WHERE SS_ITEM_SK = I_ITEM_SK;
+C_BASE_M2            C_BASE_M2_NONNULL    S_BASE_M2   
+----------------------------------------------------------
+250000               166667               8332466.67  
+1 row selected.
+iSQL> ALTER SYSTEM SET __TEMP_ROW_FORMAT_MODE = 0;
+Alter success.
+iSQL> DROP TABLE DST_COV20_ITEM_2;
+Drop success.
+iSQL> DROP TABLE DST_COV20_STORE_SALES_2;
+Drop success.

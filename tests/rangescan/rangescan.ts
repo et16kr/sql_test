@@ -2,3 +2,4 @@
 02_sort_join_inequality.sql
 03_sort_join_between.sql
 04_sort_join_composite_ineq.sql
+05_temp_row_mode2_use_sort_join_regression.sql
