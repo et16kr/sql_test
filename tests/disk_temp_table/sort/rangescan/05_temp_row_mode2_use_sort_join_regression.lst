@@ -41,7 +41,7 @@ SELECT MOD(LEVEL, 5000) + 1,
   FROM DUAL
 CONNECT BY LEVEL <= 250000;
 250000 rows inserted.
-iSQL> ALTER SYSTEM SET __TEMP_ROW_FORMAT_MODE = 1;
+iSQL> ALTER SYSTEM SET __TEMP_SORT_ROW_PACKED_DISABLE = 1;
 Alter success.
 iSQL> SELECT /*+ TEMP_TBS_DISK USE_SORT(DST_COV20_ITEM_2, DST_COV20_STORE_SALES_2) NO_USE_HASH(DST_COV20_STORE_SALES_2) */
        COUNT(*)             AS C_HINT_M1,
@@ -64,7 +64,7 @@ C_BASE_M1            C_BASE_M1_NONNULL    S_BASE_M1
 ----------------------------------------------------------
 250000               166667               8332466.67  
 1 row selected.
-iSQL> ALTER SYSTEM SET __TEMP_ROW_FORMAT_MODE = 2;
+iSQL> ALTER SYSTEM SET __TEMP_SORT_ROW_PACKED_DISABLE = 0;
 Alter success.
 iSQL> SELECT /*+ TEMP_TBS_DISK USE_SORT(DST_COV20_ITEM_2, DST_COV20_STORE_SALES_2) NO_USE_HASH(DST_COV20_STORE_SALES_2) */
        COUNT(*)              AS C_HINT_M2,
@@ -87,7 +87,7 @@ C_BASE_M2            C_BASE_M2_NONNULL    S_BASE_M2
 ----------------------------------------------------------
 250000               166667               8332466.67  
 1 row selected.
-iSQL> ALTER SYSTEM SET __TEMP_ROW_FORMAT_MODE = 0;
+iSQL> ALTER SYSTEM SET __TEMP_SORT_ROW_PACKED_DISABLE = 0;
 Alter success.
 iSQL> DROP TABLE DST_COV20_ITEM_2;
 Drop success.

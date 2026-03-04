@@ -10,7 +10,7 @@
     create user DST_COV_FS15_U identified by DST_COV_FS15_U
         default tablespace TBS1
         temporary tablespace DST_COV_FS15_UTMP;
-    alter system set __TEMP_ROW_FORMAT_MODE = 2;
+    alter system set __TEMP_SORT_ROW_PACKED_DISABLE = 0;
     connect DST_COV_FS15_U/DST_COV_FS15_U;
 
     CREATE TABLE T1
