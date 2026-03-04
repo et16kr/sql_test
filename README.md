@@ -96,8 +96,8 @@ drop table t1;
 `.ts` 엔트리 한 줄에 옵션을 붙일 수 있습니다.
 
 ```text
-./disk_temp_table/sort/16_temp_row_mode2_wide_payload.sql | timeout_sec=600
-./disk_temp_table/sort/15_temp_row_mode2_compact_payload.sql | timeout=300
+./disk_temp_table/sort/fullscan/16_temp_row_mode2_wide_payload.sql | timeout_sec=600
+./disk_temp_table/sort/fullscan/15_temp_row_mode2_compact_payload.sql | timeout=300
 ```
 
 주의사항:
@@ -117,7 +117,7 @@ drop table t1;
 단일 SQL 1건만 바로 실행:
 
 ```bash
-./bin/altitest tests/window/04_window_resort_varmix.sql
+./bin/altitest tests/disk_temp_table/sort/window/04_window_resort_varmix.sql
 ```
 
 실행 출력은 `.ts` 단위로 그룹화됩니다.
@@ -143,7 +143,7 @@ tests/tests.ts
 ```bash
 ./bin/altitest tests/tests.ts --case 12
 # 또는
-./bin/altitest tests/tests.ts --case tests/disk_temp_table/sort/01_packed_keyonly.sql
+./bin/altitest tests/tests.ts --case tests/disk_temp_table/sort/fullscan/01_packed_keyonly.sql
 ```
 
 FATAL 발생 시 복구하고 계속:
@@ -271,7 +271,7 @@ CLI 모드에서 FAIL/ERROR/ORDER/FATAL 목록 확인 후:
 Altibase 없이 동작 검증:
 
 ```bash
-tests/manual/run_smoke.sh
+tools/altitest_smoke/run_smoke.sh
 ```
 
 이 스크립트는 `PASS/ORDER/FAIL/ERROR/FATAL` 및 복구 경로를 자동 확인합니다.

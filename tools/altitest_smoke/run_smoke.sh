@@ -4,7 +4,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
 
-export PATH="$REPO_ROOT/tests/manual/fakebin:$PATH"
+export PATH="$REPO_ROOT/tools/altitest_smoke/fakebin:$PATH"
 export ALTIBASE_PORT_NO="20300"
 
 assert_json() {
@@ -33,20 +33,20 @@ run_expect() {
 }
 
 reset_basic_fixtures() {
-  cat > tests/manual/sql/fail.lst <<'LST'
+  cat > tools/altitest_smoke/sql/fail.lst <<'LST'
 ID VAL
 1 A
 2 B
 2 rows selected.
 LST
-  if [[ -f tests/manual/sql/missing.lst ]]; then
-    unlink tests/manual/sql/missing.lst
+  if [[ -f tools/altitest_smoke/sql/missing.lst ]]; then
+    unlink tools/altitest_smoke/sql/missing.lst
   fi
 }
 
 echo "[1/6] basic suite (PASS/ORDER/FAIL/ERROR)"
 reset_basic_fixtures
-run_expect 1 ./bin/altitest tests/manual/suites/basic.ts --continue-on-error --non-interactive --ai-report
+run_expect 1 ./bin/altitest tools/altitest_smoke/suites/basic.ts --continue-on-error --non-interactive --ai-report
 assert_json "
 summary = obj['summary']
 assert summary['pass'] == 5, summary
@@ -57,7 +57,7 @@ assert summary['fatal'] == 0, summary
 "
 
 echo "[2/6] fatal stop"
-run_expect 2 ./bin/altitest tests/manual/suites/fatal_stop.ts --non-interactive
+run_expect 2 ./bin/altitest tools/altitest_smoke/suites/fatal_stop.ts --non-interactive
 assert_json "
 summary = obj['summary']
 assert summary['fatal'] == 1, summary
@@ -68,7 +68,7 @@ assert r2['reason'] == 'server_port_closed', r2
 "
 
 echo "[3/6] fatal recover success"
-run_expect 1 ./bin/altitest tests/manual/suites/fatal_recover.ts --fatal-recover --fatal-recover-max 2 --non-interactive
+run_expect 1 ./bin/altitest tools/altitest_smoke/suites/fatal_recover.ts --fatal-recover --fatal-recover-max 2 --non-interactive
 assert_json "
 summary = obj['summary']
 assert summary['pass'] == 2, summary
@@ -77,7 +77,7 @@ assert summary['not_run'] == 0, summary
 "
 
 echo "[4/6] fatal recover fail"
-run_expect 3 env FAKE_CLEAN_FAIL=1 ./bin/altitest tests/manual/suites/fatal_recover.ts --fatal-recover --fatal-recover-max 1 --non-interactive
+run_expect 3 env FAKE_CLEAN_FAIL=1 ./bin/altitest tools/altitest_smoke/suites/fatal_recover.ts --fatal-recover --fatal-recover-max 1 --non-interactive
 assert_json "
 r2 = obj['results'][1]
 assert r2['status'] == 'FATAL', r2
@@ -85,7 +85,7 @@ assert r2['reason'] == 'fatal_recovery_failed', r2
 "
 
 echo "[5/6] parse issues"
-run_expect 1 ./bin/altitest tests/manual/suites/parse_issues.ts --non-interactive
+run_expect 1 ./bin/altitest tools/altitest_smoke/suites/parse_issues.ts --non-interactive
 assert_json "
 reasons = [r['reason'] for r in obj['results'] if r['status'] == 'ERROR']
 assert 'cycle_include' in reasons, reasons
