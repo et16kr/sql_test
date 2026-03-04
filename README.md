@@ -53,8 +53,9 @@ cd /home/et16/sql_test
 ```text
 tests/tests.ts
   -> tests/all.ts
-    -> tests/fullscan/fullscan.ts
-    -> tests/hash/hash.ts
+    -> tests/disk_temp_table/disk_temp_table.ts
+      -> tests/disk_temp_table/sort/sort.ts
+      -> tests/disk_temp_table/hash/hash.ts
     -> ...
 ```
 
@@ -95,8 +96,8 @@ drop table t1;
 `.ts` 엔트리 한 줄에 옵션을 붙일 수 있습니다.
 
 ```text
-./fullscan/16_temp_row_mode2_wide_payload.sql | timeout_sec=600
-./fullscan/15_temp_row_mode2_compact_payload.sql | timeout=300
+./disk_temp_table/sort/16_temp_row_mode2_wide_payload.sql | timeout_sec=600
+./disk_temp_table/sort/15_temp_row_mode2_compact_payload.sql | timeout=300
 ```
 
 주의사항:
@@ -125,10 +126,10 @@ drop table t1;
 ```text
 tests/tests.ts
   tests/all.ts
-    tests/hash/hash.ts
-      tests/hash/area_inout/area_inout.ts
-        tests/hash/area_inout/11_forced_inmemory_hash_area.sql ..... PASS
-        tests/hash/area_inout/12_forced_outmemory_hash_area.sql .... FAIL
+    tests/disk_temp_table/hash/hash.ts
+      tests/disk_temp_table/hash/area_inout/area_inout.ts
+        tests/disk_temp_table/hash/area_inout/01_forced_inmemory_hash_area.sql ..... PASS
+        tests/disk_temp_table/hash/area_inout/02_forced_outmemory_hash_area.sql .... FAIL
 ```
 
 자동화/에이전트 분석용 실행:
@@ -142,7 +143,7 @@ tests/tests.ts
 ```bash
 ./bin/altitest tests/tests.ts --case 12
 # 또는
-./bin/altitest tests/tests.ts --case tests/fullscan/01_packed_keyonly.sql
+./bin/altitest tests/tests.ts --case tests/disk_temp_table/sort/01_packed_keyonly.sql
 ```
 
 FATAL 발생 시 복구하고 계속:

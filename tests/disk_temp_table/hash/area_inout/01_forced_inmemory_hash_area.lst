@@ -5,45 +5,44 @@
      All Rights Reserved.
 -----------------------------------------------------------------
 ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
-iSQL> -- Test Purpose: Force out-memory hash path using small HASH_AREA_SIZE and verify behavior.
+iSQL> -- Test Purpose: Force in-memory hash path using large HASH_AREA_SIZE and verify behavior.
 iSQL> -- Checks: DISTINCT_HASH results are correct and HASH_AREA_SIZE is restored.
-iSQL> -- Disk hash temp packed-row coverage H12: force out-memory side with minimal HASH_AREA_SIZE
+iSQL> -- Disk hash temp packed-row coverage H11: force in-memory side with larger HASH_AREA_SIZE
 iSQL> -- Manual reference:
 iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
 iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
-iSQL> CREATE TABLE DHASH_COV12_CFG
+iSQL> CREATE TABLE DHASH_COV11_CFG
 (
     OLD_HASH_AREA    BIGINT
 ) TABLESPACE SYS_TBS_DISK_DATA;
 Create success.
-iSQL> INSERT INTO DHASH_COV12_CFG
+iSQL> INSERT INTO DHASH_COV11_CFG
 SELECT VALUE1
   FROM V$PROPERTY
  WHERE NAME = 'HASH_AREA_SIZE';
 1 row inserted.
-iSQL> ALTER SYSTEM SET HASH_AREA_SIZE = 3145728;
+iSQL> ALTER SYSTEM SET HASH_AREA_SIZE = 67108864;
 Alter success.
-iSQL> CREATE TABLE DHASH_COV12_OUT
+iSQL> CREATE TABLE DHASH_COV11_IN
 (
     ID       INTEGER,
-    K1       VARCHAR(3200),
-    PAD1     VARCHAR(3200)
+    K1       VARCHAR(128),
+    PAD1     VARCHAR(512)
 ) TABLESPACE SYS_TBS_DISK_DATA;
 Create success.
-iSQL> CREATE TABLE DHASH_COV12_MET
+iSQL> CREATE TABLE DHASH_COV11_MET
 (
     BASE_USED_TEMP_PAGE    BIGINT
 ) TABLESPACE SYS_TBS_DISK_DATA;
 Create success.
-iSQL> INSERT INTO DHASH_COV12_OUT
+iSQL> INSERT INTO DHASH_COV11_IN
 SELECT LEVEL,
-       'P' || LPAD(TO_CHAR(MOD(LEVEL, 5000)), 4, '0')
-           || RPAD('X', 2300 + MOD(LEVEL, 5), 'X'),
-       RPAD('V' || TO_CHAR(MOD(LEVEL, 3000)), 3200, 'V')
+       'K' || LPAD(TO_CHAR(MOD(LEVEL, 400)), 4, '0'),
+       RPAD('V' || TO_CHAR(MOD(LEVEL, 400)), 300, 'V')
   FROM DUAL
-CONNECT BY LEVEL <= 50000;
-50000 rows inserted.
-iSQL> INSERT INTO DHASH_COV12_MET
+CONNECT BY LEVEL <= 2000;
+2000 rows inserted.
+iSQL> INSERT INTO DHASH_COV11_MET
 SELECT VALUE
   FROM X$TEMPINFO
  WHERE NAME = 'TOTAL USED TEMP PAGE COUNT';
@@ -52,16 +51,16 @@ iSQL> SELECT /*+ TEMP_TBS_DISK DISTINCT_HASH */
        COUNT(*) AS DISTINCT_CNT
   FROM (
         SELECT DISTINCT K1
-          FROM DHASH_COV12_OUT
+          FROM DHASH_COV11_IN
        ) D;
 DISTINCT_CNT         
 -----------------------
-5000                 
+400                  
 1 row selected.
-iSQL> SELECT CASE WHEN COUNT(*) = 5000 THEN 1 ELSE 0 END AS PASS_DISTINCT
+iSQL> SELECT CASE WHEN COUNT(*) = 400 THEN 1 ELSE 0 END AS PASS_DISTINCT
   FROM (
         SELECT /*+ TEMP_TBS_DISK DISTINCT_HASH */ DISTINCT K1
-          FROM DHASH_COV12_OUT
+          FROM DHASH_COV11_IN
        ) D;
 PASS_DISTINCT 
 ----------------
@@ -73,30 +72,33 @@ iSQL> SELECT CASE
                     FROM X$TEMPINFO
                    WHERE NAME = 'TOTAL USED TEMP PAGE COUNT' )
                 - ( SELECT BASE_USED_TEMP_PAGE
-                      FROM DHASH_COV12_MET )
-                ) > 256
+                      FROM DHASH_COV11_MET )
+                ) <= 128
            THEN 1 ELSE 0
-       END AS PASS_OUTMEM_USED_TEMP
+       END AS PASS_INMEM_USED_TEMP
   FROM DUAL;
-PASS_OUTMEM_USED_TEMP 
-------------------------
+PASS_INMEM_USED_TEMP 
+-----------------------
 1           
 1 row selected.
-iSQL> DECLARE
+iSQL> CREATE OR REPLACE PROCEDURE DHASH_COV11_RESTORE_HASH_AREA
+AS
     V_OLD_HASH_AREA BIGINT;
-    V_STMT          VARCHAR(200);
 BEGIN
     SELECT OLD_HASH_AREA
       INTO V_OLD_HASH_AREA
-      FROM DHASH_COV12_CFG;
+      FROM DHASH_COV11_CFG;
 
-    V_STMT := 'ALTER SYSTEM SET HASH_AREA_SIZE = ' || V_OLD_HASH_AREA;
-    EXECUTE IMMEDIATE V_STMT;
+    EXECUTE IMMEDIATE 'ALTER SYSTEM SET HASH_AREA_SIZE = ' || V_OLD_HASH_AREA;
 END;
 /
+Create success.
+iSQL> EXECUTE DHASH_COV11_RESTORE_HASH_AREA;
 Execute success.
+iSQL> DROP PROCEDURE DHASH_COV11_RESTORE_HASH_AREA;
+Drop success.
 iSQL> SELECT CASE
-           WHEN VALUE1 = ( SELECT OLD_HASH_AREA FROM DHASH_COV12_CFG )
+           WHEN VALUE1 = ( SELECT OLD_HASH_AREA FROM DHASH_COV11_CFG )
            THEN 1 ELSE 0
        END AS PASS_HASH_RESTORE
   FROM V$PROPERTY
@@ -105,9 +107,9 @@ PASS_HASH_RESTORE
 --------------------
 1           
 1 row selected.
-iSQL> DROP TABLE DHASH_COV12_MET;
+iSQL> DROP TABLE DHASH_COV11_MET;
 Drop success.
-iSQL> DROP TABLE DHASH_COV12_OUT;
+iSQL> DROP TABLE DHASH_COV11_IN;
 Drop success.
-iSQL> DROP TABLE DHASH_COV12_CFG;
+iSQL> DROP TABLE DHASH_COV11_CFG;
 Drop success.

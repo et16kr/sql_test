@@ -1,5 +1,4 @@
-./fullscan/fullscan.ts
-./hash/hash.ts
+./disk_temp_table/disk_temp_table.ts
 ./hierarchy/hierarchy.ts
 ./hitnohit/hitnohit.ts
 ./packedrow/packedrow.ts
