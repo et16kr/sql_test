@@ -11,7 +11,7 @@
     create user DST_COV_FS16_U identified by DST_COV_FS16_U
         default tablespace TBS1
         temporary tablespace DST_COV_FS16_UTMP;
-    alter system set __TEMP_SORT_ROW_PACKED_DISABLE = 0;
+    alter system set __TEMP_SORT_ROW_PACKING_DISABLE = 0;
     connect DST_COV_FS16_U/DST_COV_FS16_U;
 
     CREATE TABLE T1

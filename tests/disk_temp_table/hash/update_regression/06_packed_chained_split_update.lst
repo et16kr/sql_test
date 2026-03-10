@@ -1,0 +1,170 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Validate packed chained GROUP_HASH update with split variable payload.
+iSQL> -- Checks:
+iSQL> --   1) MAX(V_UPD) keeps 9100-byte payload per group (split update write path).
+iSQL> --   2) Wide aggregate payloads remain stable (7000 + 7000).
+iSQL> --   3) Group cardinality and row-sum stay deterministic.
+iSQL> -- Disk hash temp packed-row coverage H16: chained packed update early-stop regression with split payload
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DHASH_COV16
+(
+    ID      INTEGER,
+    K1      VARCHAR(128),
+    V_UPD   VARCHAR(10000),
+    PAD1    VARCHAR(10000),
+    PAD2    VARCHAR(10000),
+    N1      INTEGER
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DHASH_COV16
+SELECT (G.GRP_ID - 1) * 10 + S.SEQ_NO AS ID,
+       'G' || LPAD(TO_CHAR(G.GRP_ID), 3, '0'),
+       CASE
+            WHEN S.SEQ_NO = 1 THEN RPAD('A_' || TO_CHAR(G.GRP_ID), 64, 'A')
+            WHEN S.SEQ_NO = 2 THEN RPAD('M_' || TO_CHAR(G.GRP_ID), 9050, 'M')
+            WHEN S.SEQ_NO = 3 THEN RPAD('Z_' || TO_CHAR(G.GRP_ID), 9100, 'Z')
+            ELSE RPAD('B_' || TO_CHAR(G.GRP_ID) || '_' || TO_CHAR(S.SEQ_NO), 120, 'B')
+       END,
+       CASE
+            WHEN S.SEQ_NO = 4 THEN RPAD('ZP_' || TO_CHAR(G.GRP_ID), 7000, 'P')
+            ELSE RPAD('AP_' || TO_CHAR(G.GRP_ID) || '_' || TO_CHAR(S.SEQ_NO), 7000, 'A')
+       END,
+       CASE
+            WHEN S.SEQ_NO = 5 THEN RPAD('ZQ_' || TO_CHAR(G.GRP_ID), 7000, 'Q')
+            ELSE RPAD('AQ_' || TO_CHAR(G.GRP_ID) || '_' || TO_CHAR(S.SEQ_NO), 7000, 'A')
+       END,
+       MOD((G.GRP_ID * 37) + (S.SEQ_NO * 11), 1000)
+  FROM (
+        SELECT LEVEL AS GRP_ID
+          FROM DUAL
+        CONNECT BY LEVEL <= 64
+       ) G,
+       (
+        SELECT LEVEL AS SEQ_NO
+          FROM DUAL
+        CONNECT BY LEVEL <= 10
+       ) S;
+640 rows inserted.
+iSQL> SELECT /*+ TEMP_TBS_DISK GROUP_HASH */
+       K1,
+       COUNT(*) AS CNT_V,
+       LENGTH(MAX(V_UPD)) AS LEN_MAX_V,
+       LENGTH(MAX(PAD1)) AS LEN_MAX_P1,
+       LENGTH(MAX(PAD2)) AS LEN_MAX_P2,
+       SUM(N1) AS SUM_N1
+  FROM DHASH_COV16
+ GROUP BY K1
+ ORDER BY K1
+ LIMIT 20;
+K1                                                                                                                                
+------------------------------------------------------------------------------------------------------------------------------------
+CNT_V                LEN_MAX_V            LEN_MAX_P1           
+-------------------------------------------------------------------
+LEN_MAX_P2           SUM_N1               
+---------------------------------------------
+G001                                                                                                                              
+10                   9100                 7000                 
+7000                 975                  
+G002                                                                                                                              
+10                   9100                 7000                 
+7000                 1345                 
+G003                                                                                                                              
+10                   9100                 7000                 
+7000                 1715                 
+G004                                                                                                                              
+10                   9100                 7000                 
+7000                 2085                 
+G005                                                                                                                              
+10                   9100                 7000                 
+7000                 2455                 
+G006                                                                                                                              
+10                   9100                 7000                 
+7000                 2825                 
+G007                                                                                                                              
+10                   9100                 7000                 
+7000                 3195                 
+G008                                                                                                                              
+10                   9100                 7000                 
+7000                 3565                 
+G009                                                                                                                              
+10                   9100                 7000                 
+7000                 3935                 
+G010                                                                                                                              
+10                   9100                 7000                 
+7000                 4305                 
+G011                                                                                                                              
+10                   9100                 7000                 
+7000                 4675                 
+G012                                                                                                                              
+10                   9100                 7000                 
+7000                 5045                 
+G013                                                                                                                              
+10                   9100                 7000                 
+7000                 5415                 
+G014                                                                                                                              
+10                   9100                 7000                 
+7000                 5785                 
+G015                                                                                                                              
+10                   9100                 7000                 
+7000                 6155                 
+G016                                                                                                                              
+10                   9100                 7000                 
+7000                 6525                 
+G017                                                                                                                              
+10                   9100                 7000                 
+7000                 6895                 
+G018                                                                                                                              
+10                   9100                 7000                 
+7000                 7265                 
+G019                                                                                                                              
+10                   9100                 7000                 
+7000                 7635                 
+G020                                                                                                                              
+10                   9100                 7000                 
+7000                 8005                 
+20 rows selected.
+iSQL> SELECT CASE
+           WHEN COUNT(*) = 64 THEN 1 ELSE 0
+       END AS PASS_GROUP_SHAPE
+  FROM (
+        SELECT /*+ TEMP_TBS_DISK GROUP_HASH */
+               K1,
+               LENGTH(MAX(V_UPD)) AS LEN_MAX_V,
+               LENGTH(MAX(PAD1)) AS LEN_MAX_P1,
+               LENGTH(MAX(PAD2)) AS LEN_MAX_P2,
+               COUNT(*) AS CNT_V
+          FROM DHASH_COV16
+         GROUP BY K1
+       ) G
+ WHERE LEN_MAX_V = 9100
+   AND LEN_MAX_P1 = 7000
+   AND LEN_MAX_P2 = 7000
+   AND CNT_V = 10;
+PASS_GROUP_SHAPE 
+-------------------
+1           
+1 row selected.
+iSQL> SELECT CASE
+           WHEN SUM(CNT_V) = 640 THEN 1 ELSE 0
+       END AS PASS_ROW_SUM
+  FROM (
+        SELECT /*+ TEMP_TBS_DISK GROUP_HASH */
+               K1,
+               COUNT(*) AS CNT_V
+          FROM DHASH_COV16
+         GROUP BY K1
+       ) G;
+PASS_ROW_SUM 
+---------------
+1           
+1 row selected.
+iSQL> DROP TABLE DHASH_COV16;
+Drop success.

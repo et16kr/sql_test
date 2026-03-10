@@ -21,7 +21,7 @@ iSQL>     create user DST_COV_FS16_U identified by DST_COV_FS16_U
         default tablespace TBS1
         temporary tablespace DST_COV_FS16_UTMP;
 Create success.
-iSQL>     alter system set __TEMP_SORT_ROW_PACKED_DISABLE = 0;
+iSQL>     alter system set __TEMP_SORT_ROW_PACKING_DISABLE = 0;
 Alter success.
 iSQL>     connect DST_COV_FS16_U/DST_COV_FS16_U;
 Connect success.

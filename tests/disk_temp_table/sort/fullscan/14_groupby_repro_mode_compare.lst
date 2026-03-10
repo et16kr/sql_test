@@ -120,7 +120,7 @@ COUNT(*)
 40                   
 1 row selected.
 iSQL> -- Mode 1: expected 7
-iSQL> alter system set __TEMP_SORT_ROW_PACKED_DISABLE = 1;
+iSQL> alter system set __TEMP_SORT_ROW_PACKING_DISABLE = 1;
 Alter success.
 iSQL> select count(*) from (
     select i_manufact_id, i_item_id, i_item_desc, i_current_price
@@ -132,7 +132,7 @@ COUNT(*)
 7                    
 1 row selected.
 iSQL> -- Mode 2: expected 20 on affected build
-iSQL> alter system set __TEMP_SORT_ROW_PACKED_DISABLE = 0;
+iSQL> alter system set __TEMP_SORT_ROW_PACKING_DISABLE = 0;
 Alter success.
 iSQL> select count(*) from (
     select i_manufact_id, i_item_id, i_item_desc, i_current_price
@@ -144,7 +144,7 @@ COUNT(*)
 7                    
 1 row selected.
 iSQL> -- Optional detail output
-iSQL> alter system set __TEMP_SORT_ROW_PACKED_DISABLE = 1;
+iSQL> alter system set __TEMP_SORT_ROW_PACKING_DISABLE = 1;
 Alter success.
 iSQL> select count(*) from
 (select i_manufact_id, i_item_id, i_item_desc, i_current_price
@@ -154,7 +154,7 @@ COUNT(*)
 -----------------------
 7                    
 1 row selected.
-iSQL> alter system set __TEMP_SORT_ROW_PACKED_DISABLE = 0;
+iSQL> alter system set __TEMP_SORT_ROW_PACKING_DISABLE = 0;
 Alter success.
 iSQL> select count(*) from
 (select i_manufact_id, i_item_id, i_item_desc, i_current_price

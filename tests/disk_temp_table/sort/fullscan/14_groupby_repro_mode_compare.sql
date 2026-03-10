@@ -85,7 +85,7 @@ commit;
 select count(*) from gb_repro;
 
 -- Mode 1: expected 7
-alter system set __TEMP_SORT_ROW_PACKED_DISABLE = 1;
+alter system set __TEMP_SORT_ROW_PACKING_DISABLE = 1;
 select count(*) from (
     select i_manufact_id, i_item_id, i_item_desc, i_current_price
       from gb_repro
@@ -93,7 +93,7 @@ select count(*) from (
 ) x;
 
 -- Mode 2: expected 20 on affected build
-alter system set __TEMP_SORT_ROW_PACKED_DISABLE = 0;
+alter system set __TEMP_SORT_ROW_PACKING_DISABLE = 0;
 select count(*) from (
     select i_manufact_id, i_item_id, i_item_desc, i_current_price
       from gb_repro
@@ -101,13 +101,13 @@ select count(*) from (
 ) x;
 
 -- Optional detail output
-alter system set __TEMP_SORT_ROW_PACKED_DISABLE = 1;
+alter system set __TEMP_SORT_ROW_PACKING_DISABLE = 1;
 select count(*) from
 (select i_manufact_id, i_item_id, i_item_desc, i_current_price
   from gb_repro
  group by i_item_id, i_item_desc, i_current_price, i_manufact_id);
 
-alter system set __TEMP_SORT_ROW_PACKED_DISABLE = 0;
+alter system set __TEMP_SORT_ROW_PACKING_DISABLE = 0;
 select count(*) from
 (select i_manufact_id, i_item_id, i_item_desc, i_current_price
   from gb_repro

@@ -2,3 +2,4 @@
 02_window_multi_update.sql
 03_chained_manykeys_nonkeyonly.sql
 04_varlen_null_mix.sql
+05_hotfirst_chained_split_update.sql
