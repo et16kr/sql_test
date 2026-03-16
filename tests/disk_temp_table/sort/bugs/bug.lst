@@ -1,0 +1,127 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> create table t1 (a char(1000), b char(1000), c char(10000), d char(10000), e char(10000)) tablespace sys_tbs_disk_data;
+Create success.
+iSQL> create table t2 (a char(1000), b char(1000), c char(10000), d char(10000), e char(10000)) tablespace sys_tbs_disk_data;
+Create success.
+iSQL> insert into t1 values (1, 1, 1, 1, 1);
+1 row inserted.
+iSQL> insert into t1 values (2, 2, 2, 2, 2);
+1 row inserted.
+iSQL> insert into t1 values (3, 3, 3, 3, 3);
+1 row inserted.
+iSQL> insert into t1 values (4, 4, 4, 4, 4);
+1 row inserted.
+iSQL> insert into t1 values (5, 5, 5, 5, 5);
+1 row inserted.
+iSQL> insert into t1 values (6, 6, 6, 6, 6);
+1 row inserted.
+iSQL> insert into t1 values (7, 7, 7, 7, 7);
+1 row inserted.
+iSQL> insert into t1 values (8, 8, 8, 8, 8);
+1 row inserted.
+iSQL> insert into t1 values (9, 9, 9, 9, 9);
+1 row inserted.
+iSQL> insert into t1 values (1, 1, 1, 1, 1);
+1 row inserted.
+iSQL> insert into t1 values (2, 2, 2, 2, 2);
+1 row inserted.
+iSQL> insert into t1 values (3, 3, 3, 3, 3);
+1 row inserted.
+iSQL> insert into t1 values (4, 4, 4, 4, 4);
+1 row inserted.
+iSQL> insert into t1 values (5, 5, 5, 5, 5);
+1 row inserted.
+iSQL> insert into t1 values (6, 6, 6, 6, 6);
+1 row inserted.
+iSQL> insert into t1 values (7, 7, 7, 7, 7);
+1 row inserted.
+iSQL> insert into t1 values (8, 8, 8, 8, 8);
+1 row inserted.
+iSQL> insert into t1 values (9, 9, 9, 9, 9);
+1 row inserted.
+iSQL> insert into t2 values (5, 5, 50, 50, 50);
+1 row inserted.
+iSQL> insert into t2 values (1, 2, 3, 4, 5);
+1 row inserted.
+iSQL> insert into t2 values (0, 0, 0, 0, 0);
+1 row inserted.
+iSQL> insert into t2 values (1, 1, 100, 100, 100);
+1 row inserted.
+iSQL> insert into t2 values (10, 10, 10, 10, 10);
+1 row inserted.
+iSQL> insert into t2 values (7, 4, 3, 3, 3);
+1 row inserted.
+iSQL> insert into t2 values (8, 8, 9, 9, 9);
+1 row inserted.
+iSQL> ALTER SYSTEM SET INIT_TOTAL_WA_SIZE = 0;
+Alter success.
+iSQL> alter system set __TEMP_SORT_ROW_PACKING_DISABLE = 1;
+Alter success.
+iSQL> select /*+ USE_SORT(t2, t1) */ (t1.a+0), (t1.b+0), (t1.c+0), (t1.d+0), (t1.e+0), (t2.c+0), (t2.d+0), (t2.e+0)
+from t1, t2 where t1.a = t2.a and t1.b = t2.b;
+(T1.A+0)               (T1.B+0)               (T1.C+0)               
+-------------------------------------------------------------------------
+(T1.D+0)               (T1.E+0)               (T2.C+0)               
+-------------------------------------------------------------------------
+(T2.D+0)               (T2.E+0)               
+-------------------------------------------------
+5                      5                      5                      
+5                      5                      50                     
+50                     50                     
+5                      5                      5                      
+5                      5                      50                     
+50                     50                     
+1                      1                      1                      
+1                      1                      100                    
+100                    100                    
+1                      1                      1                      
+1                      1                      100                    
+100                    100                    
+8                      8                      8                      
+8                      8                      9                      
+9                      9                      
+8                      8                      8                      
+8                      8                      9                      
+9                      9                      
+6 rows selected.
+iSQL> alter system set __TEMP_SORT_ROW_PACKING_DISABLE = 0;
+Alter success.
+iSQL> select /*+ USE_SORT(t2, t1) */ (t1.a+0), (t1.b+0), (t1.c+0), (t1.d+0), (t1.e+0), (t2.c+0), (t2.d+0), (t2.e+0)
+from t1, t2 where t1.a = t2.a and t1.b = t2.b;
+(T1.A+0)               (T1.B+0)               (T1.C+0)               
+-------------------------------------------------------------------------
+(T1.D+0)               (T1.E+0)               (T2.C+0)               
+-------------------------------------------------------------------------
+(T2.D+0)               (T2.E+0)               
+-------------------------------------------------
+5                      5                      5                      
+5                      5                      50                     
+50                     50                     
+5                      5                      5                      
+5                      5                      50                     
+50                     50                     
+1                      1                      1                      
+1                      1                      100                    
+100                    100                    
+1                      1                      1                      
+1                      1                      100                    
+100                    100                    
+8                      8                      8                      
+8                      8                      9                      
+9                      9                      
+8                      8                      8                      
+8                      8                      9                      
+9                      9                      
+6 rows selected.
+iSQL> drop table t1;
+Drop success.
+iSQL> drop table t2;
+Drop success.
+iSQL> ALTER SYSTEM SET INIT_TOTAL_WA_SIZE = 134217728;
+Alter success.

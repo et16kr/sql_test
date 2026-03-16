@@ -1,3 +1,4 @@
+./bugs/bugs.ts
 ./fullscan/fullscan.ts
 ./hierarchy/hierarchy.ts
 ./hitnohit/hitnohit.ts
