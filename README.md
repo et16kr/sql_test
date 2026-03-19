@@ -91,6 +91,13 @@ drop table t1;
 --+SKIP END;
 ```
 
+`SKIP` 블록 동작:
+
+- `SKIP` 블록 안의 SQL은 실행됩니다.
+- 대신 비교용 출력(`.out` / `.lst` 대조 대상)에는 포함되지 않습니다.
+- hidden SQL의 일반 실행 오류(return code)는 cleanup 용도로 보고 무시합니다. timeout/fatal 은 그대로 실패 처리합니다.
+- 숨김 실행에 사용된 SQL은 케이스 artifact의 `*.hidden.pre.sql` 로 남습니다.
+
 ### 3.2 `.ts`에서 케이스별 timeout 지정
 
 `.ts` 엔트리 한 줄에 옵션을 붙일 수 있습니다.

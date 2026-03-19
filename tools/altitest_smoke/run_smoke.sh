@@ -33,6 +33,7 @@ run_expect() {
 }
 
 reset_basic_fixtures() {
+  rm -rf "${TMPDIR:-/tmp}/altitest_smoke_state"
   cat > tools/altitest_smoke/sql/fail.lst <<'LST'
 ID VAL
 1 A
@@ -49,7 +50,7 @@ reset_basic_fixtures
 run_expect 1 ./bin/altitest tools/altitest_smoke/suites/basic.ts --continue-on-error --non-interactive --ai-report
 assert_json "
 summary = obj['summary']
-assert summary['pass'] == 5, summary
+assert summary['pass'] == 7, summary
 assert summary['order'] == 1, summary
 assert summary['fail'] == 2, summary
 assert summary['error'] == 1, summary

@@ -2,6 +2,8 @@
 ../sql/setenv.sql
 ../sql/env_reset.sql
 ../sql/skip.sql
+../sql/skip_exec.sql
+../sql/skip_error_ok.sql
 ../sql/order.sql
 ../sql/fail.sql
 ../sql/missing.sql

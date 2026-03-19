@@ -20,12 +20,27 @@ class DirectiveAction:
 @dataclass
 class ParseResult:
     preprocessed_sql: str
+    hidden_sql: str
     actions: List[DirectiveAction]
     timeout_sec_override: Optional[int]
     issues: List[ParseIssue]
+    segments: List["SqlSegment"] = field(default_factory=list)
 
 
 _PREFIX = "--+"
+
+
+@dataclass
+class SqlSegment:
+    sql: str
+    hidden: bool
+
+
+def _flush_segment(segments: List[SqlSegment], lines: List[str], hidden: bool) -> None:
+    if not lines:
+        return
+    segments.append(SqlSegment(sql="".join(lines), hidden=hidden))
+    lines.clear()
 
 
 def _parse_set_env(payload: str) -> Dict[str, str]:
@@ -43,7 +58,10 @@ def parse_sql_file(sql_path: str) -> ParseResult:
     actions: List[DirectiveAction] = []
     issues: List[ParseIssue] = []
     env_map: Dict[str, str] = {}
-    pre_lines: List[str] = []
+    visible_lines: List[str] = []
+    hidden_lines: List[str] = []
+    segments: List[SqlSegment] = []
+    current_lines: List[str] = []
     in_skip = False
     timeout_sec_override: Optional[int] = None
 
@@ -54,8 +72,10 @@ def parse_sql_file(sql_path: str) -> ParseResult:
     except OSError as e:
         return ParseResult(
             preprocessed_sql="",
+            hidden_sql="",
             actions=[],
             timeout_sec_override=None,
+            segments=[],
             issues=[ParseIssue(path=path, reason=REASON_PARSE_ERROR, detail=f"failed to read sql: {e}")],
         )
 
@@ -114,12 +134,14 @@ def parse_sql_file(sql_path: str) -> ParseResult:
                 if in_skip:
                     issues.append(ParseIssue(path=path, reason=REASON_PARSE_ERROR, detail=f"line {lineno}: nested SKIP BEGIN not supported"))
                 else:
+                    _flush_segment(segments, current_lines, hidden=False)
                     in_skip = True
 
             elif body_upper == "SKIP END;":
                 if not in_skip:
                     issues.append(ParseIssue(path=path, reason=REASON_PARSE_ERROR, detail=f"line {lineno}: SKIP END without SKIP BEGIN"))
                 else:
+                    _flush_segment(segments, current_lines, hidden=True)
                     in_skip = False
 
             else:
@@ -127,15 +149,21 @@ def parse_sql_file(sql_path: str) -> ParseResult:
             continue
 
         if in_skip:
-            continue
-        pre_lines.append(raw)
+            hidden_lines.append(raw)
+        else:
+            visible_lines.append(raw)
+        current_lines.append(raw)
 
     if in_skip:
         issues.append(ParseIssue(path=path, reason=REASON_PARSE_ERROR, detail="SKIP BEGIN without matching SKIP END"))
+    else:
+        _flush_segment(segments, current_lines, hidden=False)
 
     return ParseResult(
-        preprocessed_sql="".join(pre_lines),
+        preprocessed_sql="".join(visible_lines),
+        hidden_sql="".join(hidden_lines),
         actions=actions,
         timeout_sec_override=timeout_sec_override,
+        segments=segments,
         issues=issues,
     )

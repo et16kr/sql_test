@@ -230,9 +230,15 @@ def _run_phase(
         return config.STATUS_ERROR, issue.reason, "", "", 1, phase_artifacts, False
 
     pre_path = str(Path(case_dir, f"{phase_name}.pre.sql"))
+    hidden_pre_path = str(Path(case_dir, f"{phase_name}.hidden.pre.sql"))
+    phase_stdout_path = str(Path(case_dir, f"{phase_name}.stdout"))
+    phase_stderr_path = str(Path(case_dir, f"{phase_name}.stderr"))
     write_text(pre_path, parse_result.preprocessed_sql)
     if phase_name == "test":
         phase_artifacts["preprocessed_sql"] = pre_path
+    if parse_result.hidden_sql:
+        write_text(hidden_pre_path, parse_result.hidden_sql)
+        phase_artifacts["hidden_preprocessed_sql"] = hidden_pre_path
 
     ok, system_result = run_system_actions(parse_result.actions, base_env=ctx.base_env, timeout_sec=phase_timeout_sec)
     if not ok:
@@ -250,9 +256,64 @@ def _run_phase(
             )
         return config.STATUS_ERROR, config.REASON_EXEC_FAILED, system_result.stdout, system_result.stderr, system_result.returncode, phase_artifacts, False
 
+    if parse_result.hidden_sql:
+        hidden_stdout_path = str(Path(case_dir, f"{phase_name}.hidden.stdout"))
+        hidden_stderr_path = str(Path(case_dir, f"{phase_name}.hidden.stderr"))
+        hidden_res = execute_is(hidden_pre_path, timeout_sec=phase_timeout_sec, env=ctx.base_env)
+        write_text(hidden_stdout_path, hidden_res.stdout)
+        write_text(hidden_stderr_path, hidden_res.stderr)
+        phase_artifacts["hidden_stdout"] = hidden_stdout_path
+        phase_artifacts["hidden_stderr"] = hidden_stderr_path
+
+        if is_fatal_from_output(hidden_res.stdout, hidden_res.stderr, config.FATAL_PATTERNS):
+            return (
+                config.STATUS_FATAL,
+                config.REASON_SERVER_DISCONNECTED,
+                hidden_res.stdout,
+                hidden_res.stderr,
+                hidden_res.returncode,
+                phase_artifacts,
+                True,
+            )
+
+        if not is_port_open("localhost", ctx.port):
+            return (
+                config.STATUS_FATAL,
+                config.REASON_SERVER_PORT_CLOSED,
+                hidden_res.stdout,
+                hidden_res.stderr,
+                hidden_res.returncode,
+                phase_artifacts,
+                True,
+            )
+
+        if hidden_res.timed_out:
+            return (
+                config.STATUS_ERROR,
+                config.REASON_TIMEOUT,
+                hidden_res.stdout,
+                hidden_res.stderr,
+                hidden_res.returncode,
+                phase_artifacts,
+                True,
+            )
+
+        if hidden_res.error:
+            return (
+                config.STATUS_ERROR,
+                config.REASON_EXEC_FAILED,
+                hidden_res.stdout,
+                hidden_res.stderr,
+                hidden_res.returncode,
+                phase_artifacts,
+                True,
+            )
+
+        # Hidden SQL is primarily used for best-effort cleanup.
+        if hidden_res.returncode != 0:
+            phase_artifacts["hidden_ignored_returncode"] = str(hidden_res.returncode)
+
     res = execute_is(pre_path, timeout_sec=phase_timeout_sec, env=ctx.base_env)
-    phase_stdout_path = str(Path(case_dir, f"{phase_name}.stdout"))
-    phase_stderr_path = str(Path(case_dir, f"{phase_name}.stderr"))
     write_text(phase_stdout_path, res.stdout)
     write_text(phase_stderr_path, res.stderr)
 

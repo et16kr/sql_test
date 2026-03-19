@@ -10,6 +10,24 @@ if [[ ! -f "$sql_file" ]]; then
   exit 2
 fi
 content="$(cat "$sql_file")"
+state_root="${TMPDIR:-/tmp}/altitest_smoke_state"
+mkdir -p "$state_root"
+
+while IFS= read -r line; do
+  if [[ "$line" =~ ^--CASE:STATE[[:space:]]+SET[[:space:]]+([A-Za-z0-9_.-]+)$ ]]; then
+    : > "$state_root/${BASH_REMATCH[1]}"
+  fi
+done <<<"$content"
+
+missing_state=0
+while IFS= read -r line; do
+  if [[ "$line" =~ ^--CASE:STATE[[:space:]]+REQUIRE[[:space:]]+([A-Za-z0-9_.-]+)$ ]]; then
+    if [[ ! -f "$state_root/${BASH_REMATCH[1]}" ]]; then
+      missing_state=1
+      break
+    fi
+  fi
+done <<<"$content"
 
 if grep -q -- "--CASE:ERROR" <<<"$content"; then
   echo "simulated execution error" >&2
@@ -33,6 +51,16 @@ OUT
 fi
 
 if grep -q -- "--CASE:FAIL" <<<"$content"; then
+  cat <<'OUT'
+ID VAL
+1 A
+2 X
+2 rows selected.
+OUT
+  exit 0
+fi
+
+if [[ "$missing_state" -eq 1 ]]; then
   cat <<'OUT'
 ID VAL
 1 A
