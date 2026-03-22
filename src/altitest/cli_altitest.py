@@ -18,7 +18,7 @@ from .case_builder import build_case_plans
 from .classifier import classify_compare, is_fatal_from_output, status_priority
 from .comparator import order_only_mismatch, strict_compare
 from .directive_parser import parse_sql_file
-from .executor import execute_is, run_shell_command, run_system_actions, write_text
+from .executor import build_env, execute_is, run_shell_command, run_system_actions, write_text
 from .healthcheck import is_port_open, resolve_port
 from .model import CasePlan, CaseResult, ParseIssue, RunOptions, RunResult
 from .recovery import recover_with_clean_and_start
@@ -259,7 +259,8 @@ def _run_phase(
     if parse_result.hidden_sql:
         hidden_stdout_path = str(Path(case_dir, f"{phase_name}.hidden.stdout"))
         hidden_stderr_path = str(Path(case_dir, f"{phase_name}.hidden.stderr"))
-        hidden_res = execute_is(hidden_pre_path, timeout_sec=phase_timeout_sec, env=ctx.base_env)
+        hidden_env = build_env(ctx.base_env, parse_result.hidden_env, parse_result.hidden_unset_env_keys)
+        hidden_res = execute_is(hidden_pre_path, timeout_sec=phase_timeout_sec, env=hidden_env)
         write_text(hidden_stdout_path, hidden_res.stdout)
         write_text(hidden_stderr_path, hidden_res.stderr)
         phase_artifacts["hidden_stdout"] = hidden_stdout_path
@@ -313,7 +314,8 @@ def _run_phase(
         if hidden_res.returncode != 0:
             phase_artifacts["hidden_ignored_returncode"] = str(hidden_res.returncode)
 
-    res = execute_is(pre_path, timeout_sec=phase_timeout_sec, env=ctx.base_env)
+    visible_env = build_env(ctx.base_env, parse_result.visible_env, parse_result.visible_unset_env_keys)
+    res = execute_is(pre_path, timeout_sec=phase_timeout_sec, env=visible_env)
     write_text(phase_stdout_path, res.stdout)
     write_text(phase_stderr_path, res.stderr)
 

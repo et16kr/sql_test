@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 from .config import REASON_PARSE_ERROR, REASON_UNKNOWN_DIRECTIVE
 from .model import ParseIssue
@@ -15,6 +15,7 @@ class DirectiveAction:
     kind: str
     command: str
     env: Dict[str, str] = field(default_factory=dict)
+    unset_env_keys: Set[str] = field(default_factory=set)
 
 
 @dataclass
@@ -25,6 +26,10 @@ class ParseResult:
     timeout_sec_override: Optional[int]
     issues: List[ParseIssue]
     segments: List["SqlSegment"] = field(default_factory=list)
+    visible_env: Dict[str, str] = field(default_factory=dict)
+    visible_unset_env_keys: Set[str] = field(default_factory=set)
+    hidden_env: Dict[str, str] = field(default_factory=dict)
+    hidden_unset_env_keys: Set[str] = field(default_factory=set)
 
 
 _PREFIX = "--+"
@@ -58,12 +63,17 @@ def parse_sql_file(sql_path: str) -> ParseResult:
     actions: List[DirectiveAction] = []
     issues: List[ParseIssue] = []
     env_map: Dict[str, str] = {}
+    unset_env_keys: Set[str] = set()
     visible_lines: List[str] = []
     hidden_lines: List[str] = []
     segments: List[SqlSegment] = []
     current_lines: List[str] = []
     in_skip = False
     timeout_sec_override: Optional[int] = None
+    visible_env: Optional[Dict[str, str]] = None
+    visible_unset_env_keys: Optional[Set[str]] = None
+    hidden_env: Optional[Dict[str, str]] = None
+    hidden_unset_env_keys: Optional[Set[str]] = None
 
     path = str(Path(sql_path).resolve())
     try:
@@ -77,6 +87,10 @@ def parse_sql_file(sql_path: str) -> ParseResult:
             timeout_sec_override=None,
             segments=[],
             issues=[ParseIssue(path=path, reason=REASON_PARSE_ERROR, detail=f"failed to read sql: {e}")],
+            visible_env={},
+            visible_unset_env_keys=set(),
+            hidden_env={},
+            hidden_unset_env_keys=set(),
         )
 
     for lineno, raw in enumerate(lines, start=1):
@@ -92,7 +106,14 @@ def parse_sql_file(sql_path: str) -> ParseResult:
                 if not command:
                     issues.append(ParseIssue(path=path, reason=REASON_PARSE_ERROR, detail=f"line {lineno}: SYSTEM command empty"))
                     continue
-                actions.append(DirectiveAction(kind="SYSTEM", command=command, env=dict(env_map)))
+                actions.append(
+                    DirectiveAction(
+                        kind="SYSTEM",
+                        command=command,
+                        env=dict(env_map),
+                        unset_env_keys=set(unset_env_keys),
+                    )
+                )
 
             elif body_upper.startswith("SET_ENV "):
                 if not body.endswith(";"):
@@ -102,6 +123,7 @@ def parse_sql_file(sql_path: str) -> ParseResult:
                 try:
                     parsed = _parse_set_env(payload)
                     env_map.update(parsed)
+                    unset_env_keys.difference_update(parsed.keys())
                 except ValueError as e:
                     issues.append(ParseIssue(path=path, reason=REASON_PARSE_ERROR, detail=f"line {lineno}: {e}"))
 
@@ -114,6 +136,7 @@ def parse_sql_file(sql_path: str) -> ParseResult:
                     issues.append(ParseIssue(path=path, reason=REASON_PARSE_ERROR, detail=f"line {lineno}: UNSET_ENV key empty"))
                 else:
                     env_map.pop(key, None)
+                    unset_env_keys.add(key)
 
             elif body_upper.startswith("TIMEOUT_SEC "):
                 if not body.endswith(";"):
@@ -150,8 +173,14 @@ def parse_sql_file(sql_path: str) -> ParseResult:
 
         if in_skip:
             hidden_lines.append(raw)
+            if hidden_env is None and raw.strip() and not raw.lstrip().startswith("--"):
+                hidden_env = dict(env_map)
+                hidden_unset_env_keys = set(unset_env_keys)
         else:
             visible_lines.append(raw)
+            if visible_env is None and raw.strip() and not raw.lstrip().startswith("--"):
+                visible_env = dict(env_map)
+                visible_unset_env_keys = set(unset_env_keys)
         current_lines.append(raw)
 
     if in_skip:
@@ -166,4 +195,8 @@ def parse_sql_file(sql_path: str) -> ParseResult:
         timeout_sec_override=timeout_sec_override,
         segments=segments,
         issues=issues,
+        visible_env=visible_env or {},
+        visible_unset_env_keys=visible_unset_env_keys or set(),
+        hidden_env=hidden_env or {},
+        hidden_unset_env_keys=hidden_unset_env_keys or set(),
     )

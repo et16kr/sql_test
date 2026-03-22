@@ -5,7 +5,7 @@ from __future__ import annotations
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, Tuple
+from typing import Dict, Iterable, Optional, Set, Tuple
 
 from .directive_parser import DirectiveAction
 
@@ -27,6 +27,14 @@ def _to_text(value: object) -> str:
     if isinstance(value, str):
         return value
     return str(value)
+
+
+def build_env(base_env: Dict[str, str], overrides: Dict[str, str], unset_env_keys: Optional[Set[str]] = None) -> Dict[str, str]:
+    env = dict(base_env)
+    for key in unset_env_keys or set():
+        env.pop(key, None)
+    env.update(overrides)
+    return env
 
 
 
@@ -58,8 +66,7 @@ def run_shell_command(command: str, env: Dict[str, str], timeout_sec: int) -> Co
 def run_system_actions(actions: Iterable[DirectiveAction], base_env: Dict[str, str], timeout_sec: int) -> Tuple[bool, CommandResult]:
     last = CommandResult(returncode=0, stdout="", stderr="")
     for action in actions:
-        env = dict(base_env)
-        env.update(action.env)
+        env = build_env(base_env, action.env, action.unset_env_keys)
         last = run_shell_command(action.command, env, timeout_sec)
         if last.timed_out or last.error or last.returncode != 0:
             return False, last

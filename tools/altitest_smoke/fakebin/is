@@ -29,8 +29,32 @@ while IFS= read -r line; do
   fi
 done <<<"$content"
 
+env_mismatch=0
+while IFS= read -r line; do
+  if [[ "$line" =~ ^--CASE:ENV[[:space:]]+REQUIRE[[:space:]]+([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+    key="${BASH_REMATCH[1]}"
+    expected="${BASH_REMATCH[2]}"
+    actual="${!key-}"
+    if [[ "$actual" != "$expected" ]]; then
+      env_mismatch=1
+      break
+    fi
+  elif [[ "$line" =~ ^--CASE:ENV[[:space:]]+UNSET[[:space:]]+([A-Za-z_][A-Za-z0-9_]*)$ ]]; then
+    key="${BASH_REMATCH[1]}"
+    if [[ -n "${!key-}" ]]; then
+      env_mismatch=1
+      break
+    fi
+  fi
+done <<<"$content"
+
 if grep -q -- "--CASE:ERROR" <<<"$content"; then
   echo "simulated execution error" >&2
+  exit 1
+fi
+
+if [[ "$env_mismatch" -eq 1 ]]; then
+  echo "simulated env mismatch" >&2
   exit 1
 fi
 

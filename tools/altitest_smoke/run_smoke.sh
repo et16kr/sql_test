@@ -5,7 +5,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
 
 export PATH="$REPO_ROOT/tools/altitest_smoke/fakebin:$PATH"
-export ALTIBASE_PORT_NO="20300"
+export ALTIBASE_PORT_NO="21403"
 
 assert_json() {
   local code="$1"
@@ -50,7 +50,7 @@ reset_basic_fixtures
 run_expect 1 ./bin/altitest tools/altitest_smoke/suites/basic.ts --continue-on-error --non-interactive --ai-report
 assert_json "
 summary = obj['summary']
-assert summary['pass'] == 7, summary
+assert summary['pass'] == 8, summary
 assert summary['order'] == 1, summary
 assert summary['fail'] == 2, summary
 assert summary['error'] == 1, summary
