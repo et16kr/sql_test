@@ -1,2 +1,2 @@
 bug.sql
-02_altidev4_tests_test_regression.sql
+02/02.ts

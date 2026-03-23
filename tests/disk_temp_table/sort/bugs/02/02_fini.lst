@@ -1,0 +1,39 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> DROP TABLE CA_ACCTCONFIG_MST;
+Drop success.
+iSQL> DROP TABLE CA_ACGRP_DTL;
+Drop success.
+iSQL> DROP TABLE CA_ACGRP_LDTL;
+Drop success.
+iSQL> DROP TABLE CA_ACGRP_MST;
+Drop success.
+iSQL> DROP TABLE CA_ACPE_MST;
+Drop success.
+iSQL> DROP TABLE CA_CECOA_MST;
+Drop success.
+iSQL> DROP TABLE CA_CE_GR;
+Drop success.
+iSQL> DROP TABLE CA_COA_LDTL;
+Drop success.
+iSQL> DROP TABLE CA_COA_MST;
+Drop success.
+iSQL> DROP TABLE CA_DOCUTP_MST;
+Drop success.
+iSQL> DROP TABLE CA_DOCU_MST;
+Drop success.
+iSQL> DROP TABLE CA_GRPCAL_MST;
+Drop success.
+iSQL> DROP TABLE CA_IHCH_MST;
+Drop success.
+iSQL> DROP TABLE CA_PREV_INFO;
+Drop success.
+iSQL> DROP TABLE CM_LANGDIC_MST;
+Drop success.
+iSQL> DROP TABLE CA_CECOA_INFO;
+Drop success.

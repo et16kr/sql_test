@@ -1,0 +1,1356 @@
+--+SET_ENV ISQL_BUFFER_SIZE=256000;
+--+TIMEOUT_SEC 600;
+
+WITH T_DEFAULT AS (
+            SELECT
+                 RES.COL_NUM,
+                 CASE
+                    WHEN RES.CEACCT_CD IS NULL OR RES.CEACCT_CD = '' THEN CAST(RES.COL_NUM AS CHAR)
+                    ELSE  RES.CEACCT_CD
+                 END CEACCT_CD,
+                 RES.CEACCT_NM, RES.COACGRP_CD, RES.COACCT_CD, RES.IRDS_CD, RES.DOCU_CD,
+                 RES.DATASRC_CD, RES.USE_YN , 0 COL1, 0 COL2, 0 COL3, 0 COL4, 0 COL5,
+                 0 COL6, 0 COL7, '' ACCT_FG, '' NO_ORDER, 0 AM_TOTAL
+             FROM
+            (
+              SELECT
+                 CASE
+                    WHEN SUBSTRING(COA.CEACCT_CD, 0, 1) = 'A' THEN 1
+                    ELSE 4
+                 END COL_NUM,
+                 COA.CEACCT_CD, INFO.CEACCT_NM, '' AS COACGRP_CD,
+                 '' AS COACCT_CD, '' AS IRDS_CD, '' AS DOCU_CD,
+                 '' AS DATASRC_CD, '' AS USE_YN
+               FROM CA_CECOA_MST  COA
+               LEFT OUTER JOIN CA_CECOA_INFO INFO
+                    ON COA.CEACCT_CD = INFO.CEACCT_CD
+               WHERE
+                   COA.USE_YN = 'Y'
+               GROUP BY
+                   COA.CEACCT_CD, INFO.CEACCT_NM
+               UNION ALL
+               SELECT
+                   1  AS COL_NUM, '' AS CEACCT_CD,
+                   '' AS CEACCT_NM, '' AS COACGRP_CD,
+                   '' AS COACCT_CD, '' AS IRDS_CD,
+                   '' AS DOCU_CD,  '' AS DATASRC_CD,  '' AS USE_YN
+                FROM DUAL
+                  UNION ALL
+                SELECT
+                   2  AS COL_NUM, '' AS CEACCT_CD,
+                   CASE
+                      WHEN  'KO' = 'KO' THEN '?먮낯吏곸젒?몄떇 珥앹넀??'
+                      ELSE (SELECT LANGDIC_TXT AS CEACCT_NM FROM CM_LANGDIC_MST WHERE LANG_CD = 'KO' AND LANGDIC_CD = 'D0021225')
+                   END CEACCT_NM,
+                   '' AS COACGRP_CD, '' AS COACCT_CD,
+                   '' AS IRDS_CD,  '' AS DOCU_CD,
+                   '' AS DATASRC_CD, '' AS USE_YN
+                FROM DUAL
+                UNION ALL
+                SELECT
+                  3  AS COL_NUM, '' AS CEACCT_CD,
+                  CASE
+                    WHEN  'KO' = 'KO' THEN '?밴린?쒖씠??'
+                    ELSE (SELECT LANGDIC_TXT AS CEACCT_NM FROM CM_LANGDIC_MST WHERE LANG_CD = 'KO' AND LANGDIC_CD = 'D0009038')
+                  END CEACCT_NM,
+                  '' AS COACGRP_CD, '' AS COACCT_CD,
+                  '' AS IRDS_CD,  '' AS DOCU_CD,
+                  '' AS DATASRC_CD, '' AS USE_YN
+                FROM DUAL
+                UNION ALL
+                SELECT
+                  4  AS COL_NUM, '' AS CEACCT_CD,
+                  CASE
+                    WHEN  'KO' = 'KO' THEN '?ш큵?먯씡'
+                    ELSE (SELECT LANGDIC_TXT AS CEACCT_NM FROM CM_LANGDIC_MST WHERE LANG_CD = 'KO' AND LANGDIC_CD = 'D0021226')
+                  END CEACCT_NM,
+                  '' AS COACGRP_CD, '' AS COACCT_CD,
+                  '' AS IRDS_CD,  '' AS DOCU_CD,
+                  '' AS DATASRC_CD, '' AS USE_YN
+                FROM DUAL
+                UNION ALL
+                SELECT
+                  5  AS COL_NUM, '' AS CEACCT_CD,
+                  '' AS CEACCT_NM,
+                  '' AS COACGRP_CD, '' AS COACCT_CD,
+                  '' AS IRDS_CD,  '' AS DOCU_CD,
+                  '' AS DATASRC_CD, '' AS USE_YN
+                FROM DUAL
+                UNION ALL
+                SELECT
+                   6  AS COL_NUM, '' AS CEACCT_CD,
+                   CASE
+                    WHEN  'KO' = 'KO' THEN '?곌껐?李⑤?議고몴湲덉븸'
+                    ELSE (SELECT LANGDIC_TXT AS CEACCT_NM FROM CM_LANGDIC_MST WHERE LANG_CD = 'KO' AND LANGDIC_CD = 'D0021227')
+                   END CEACCT_NM,
+                   '' AS COACGRP_CD, '' AS COACCT_CD,
+                   '' AS IRDS_CD,  '' AS DOCU_CD,
+                   '' AS DATASRC_CD, '' AS USE_YN
+                FROM DUAL
+                UNION ALL
+                SELECT
+                   7  AS COL_NUM, '' AS CEACCT_CD,
+                   CASE
+                     WHEN  'KO' = 'KO' THEN '寃利?'
+                     ELSE (SELECT LANGDIC_TXT AS CEACCT_NM FROM CM_LANGDIC_MST WHERE LANG_CD = 'KO' AND LANGDIC_CD = 'D0000438')
+                   END CEACCT_NM,
+                   '' AS COACGRP_CD, '' AS COACCT_CD,
+                   '' AS IRDS_CD,  '' AS DOCU_CD,
+                   '' AS DATASRC_CD, '' AS USE_YN
+                FROM DUAL
+                UNION ALL
+                SELECT
+                  8  AS COL_NUM, '' AS CEACCT_CD,
+                  CASE
+                    WHEN  'KO' = 'KO' THEN '李⑥씠湲덉븸'
+                    ELSE (SELECT LANGDIC_TXT AS CEACCT_NM FROM CM_LANGDIC_MST WHERE LANG_CD = 'KO' AND LANGDIC_CD = 'D0009538')
+                  END CEACCT_NM,
+                  '' AS COACGRP_CD, '' AS COACCT_CD,
+                  '' AS IRDS_CD,  '' AS DOCU_CD,
+                  '' AS DATASRC_CD, '' AS USE_YN
+                FROM DUAL
+             ) RES
+             ORDER BY
+                RES.COL_NUM, RES.CEACCT_CD
+                ),
+                T_GET_CH_ACCT AS (
+                   SELECT
+                            RES.ACGRP_FG, RES.ACGRP_CD,
+                            COALESCE(LDTL.ACGRP_NM, ACG.ACGRP_NM) ACGRP_NM,
+                            ROW_NUMBER() OVER(ORDER BY RES.ACGRP_CD) AS COL
+                         FROM
+                         (
+                            SELECT
+                                  ACG.GAAP_CD,
+                                  ACG.FORM_CD,
+                                  UP.ACGRP_FG,
+                                  MIN(UP.ACGRP_CD) ACGRP_CD
+                            FROM CA_ACGRP_MST ACG
+                            INNER JOIN CA_ACGRP_MST UP
+                                ON ACG.FORM_CD     = UP.FORM_CD     AND
+                                   ACG.ROOT_GRP_CD = UP.ROOT_GRP_CD AND
+                                   ACG.ACGRP_LV <= UP.ACGRP_LV   AND
+                                   ACG.PRINT_NO     = SUBSTRING(UP.PRINT_NO, 1, LENGTH(ACG.PRINT_NO)) AND
+                                   ACG.GAAP_CD = UP.GAAP_CD
+                            WHERE
+                                   ACG.FORM_CD  = 'D0022'           AND
+                                   ACG.ACGRP_FG = '821'             AND
+                                   UP.ACGRP_FG != '821'             AND
+                                   ACG.GAAP_CD = '1'
+                            GROUP BY
+                                UP.ACGRP_FG, ACG.GAAP_CD, ACG.FORM_CD
+                         ) RES
+                         LEFT OUTER JOIN CA_ACGRP_MST ACG
+                            ON ACG.GAAP_CD  = RES.GAAP_CD  AND
+                               ACG.FORM_CD  = RES.FORM_CD  AND
+                               ACG.ACGRP_CD = RES.ACGRP_CD
+                         LEFT OUTER JOIN CA_ACGRP_LDTL LDTL
+                            ON  LDTL.GAAP_CD = RES.GAAP_CD    AND
+                                RES.FORM_CD   = LDTL.FORM_CD  AND
+                                RES.ACGRP_CD  = LDTL.ACGRP_CD AND
+                                LDTL.LANG_CD = 'KO'
+                         ORDER BY
+                            RES.ACGRP_CD
+                ),
+                T_GET_ACCT AS (
+                SELECT
+            MST.CAL_TP, COA.ACCT_CD,
+            COALESCE(LANG.ACCT_NM ,COA.ACCT_NM) AS ACCT_NM,
+            COALESCE(LANG.FULL_ACCT_TXT ,COA.FULL_ACCT_NM) AS FULL_ACCT_NM,
+            COA.ROOT_ACCT_CD,
+            CASE
+                WHEN COA.ACCT_LV = 1 THEN DTL.ACGRP_CD
+                ELSE COA.UP_ACCT_CD
+            END AS UP_LINK_CD,
+            COA.DRCR_CD,
+            CASE
+                WHEN MST.ACGRP_FG BETWEEN '801' AND '809'
+                 THEN '1'
+                WHEN MST.ACGRP_FG BETWEEN '811' AND '813'
+                 THEN '2'
+                WHEN MST.ACGRP_FG BETWEEN '821' AND '826'
+                 THEN '3'
+                WHEN MST.ACGRP_FG = '828'
+                 THEN '3'
+                WHEN MST.ACGRP_FG IN ('831', '836', '841', '849', '850')
+                 THEN '4'
+                WHEN MST.ACGRP_FG IN ('832', '834', '837', '839', '861', '862', '863', '881',
+                                    '882', '883', '901', '902', '903', '921', '922', '923')
+                 THEN '5'
+            END AS ACTYPE_CD,
+            COA.FILL_YN
+        FROM CA_COA_MST COA
+        INNER JOIN CA_ACGRP_DTL DTL
+            ON COA.GAAP_CD = DTL.GAAP_CD AND 'D0012' = DTL.FORM_CD AND COA.ROOT_ACCT_CD = DTL.ACCT_CD
+        INNER JOIN CA_ACGRP_MST MST
+            ON DTL.GAAP_CD = MST.GAAP_CD AND DTL.FORM_CD = MST.FORM_CD AND DTL.ACGRP_CD = MST.ACGRP_CD
+        LEFT OUTER JOIN CA_COA_LDTL LANG
+            ON COA.GAAP_CD = LANG.GAAP_CD AND COA.ACCT_CD = LANG.ACCT_CD AND LANG.LANG_CD = 'KO'
+        WHERE
+            COA.GAAP_CD = '1'
+        ORDER BY
+            COA.PRINT_NO ASC, COA.ACCT_CD
+                ),
+          T_ACCT_AMT_PREV AS (
+             SELECT
+             DOCU.ACCT_CD,
+             COA.DRCR_CD,
+             SUM(COALESCE(DOCU.DR_AMT, 0)) DR_AMT,
+             SUM(COALESCE(DOCU.CR_AMT, 0)) CR_AMT
+             FROM
+            (
+              SELECT
+                   DOCU.ACCT_CD,
+                   SUM(COALESCE(DOCU.DR_AMT, 0)) AS DR_AMT,
+                   SUM(COALESCE(DOCU.CR_AMT, 0)) AS CR_AMT
+                 FROM CA_DOCU_MST DOCU
+               INNER JOIN CA_DOCUTP_MST TP
+                    ON DOCU.DOCU_CD = TP.DOCU_CD
+                WHERE
+                     DOCU.CONSGRP_CD = 'OTG'  AND
+                     DOCU.SETTL_YM   = (SELECT LYSETTL_YM AS SETTL_YM  FROM CA_PREV_INFO  WHERE  SETTL_YM = '201712')     AND
+                     DOCU.SCORP_CD IN (
+                                        SELECT
+                                           CORP_CD
+                                        FROM CA_ACPE_MST
+                                        WHERE
+                                           CONSGRP_CD  = 'OTG'   AND
+                                           SETTL_YM    = (SELECT LYSETTL_YM AS SETTL_YM  FROM CA_PREV_INFO  WHERE  SETTL_YM = '201712')    AND
+                                           FG_CD       = '2'
+                                      ) AND
+                     DOCU.TCORP_CD IN (
+                                        SELECT
+                                           CORP_CD
+                                        FROM CA_ACPE_MST
+                                        WHERE
+                                           CONSGRP_CD  = 'OTG'   AND
+                                           SETTL_YM    = (SELECT LYSETTL_YM AS SETTL_YM  FROM CA_PREV_INFO  WHERE  SETTL_YM = '201712')    AND
+                                           FG_CD       = '2'
+                                      ) AND
+                    DOCU.DOCU_ST  = '2' AND
+                    TP.ADJT_TP    = '1'
+                 GROUP BY
+                    DOCU.ACCT_CD
+                 UNION ALL
+                 SELECT
+                     DOCU.ACCT_CD,
+                     SUM(COALESCE(DOCU.DR_AMT, 0)) AS DR_AMT,
+                     SUM(COALESCE(DOCU.CR_AMT, 0)) AS CR_AMT
+                 FROM CA_DOCU_MST DOCU
+                 INNER JOIN CA_DOCUTP_MST TP
+                      ON DOCU.DOCU_CD = TP.DOCU_CD
+                 WHERE
+                     DOCU.CONSGRP_CD = 'OTG'  AND
+                     DOCU.SETTL_YM   = (SELECT LYSETTL_YM AS SETTL_YM  FROM CA_PREV_INFO  WHERE  SETTL_YM = '201712')    AND
+                     DOCU.SCORP_CD IN (
+                                        SELECT
+                                           CORP_CD
+                                        FROM CA_ACPE_MST
+                                        WHERE
+                                           CONSGRP_CD  = 'OTG'     AND
+                                           SETTL_YM    = (SELECT LYSETTL_YM AS SETTL_YM  FROM CA_PREV_INFO  WHERE  SETTL_YM = '201712')        AND
+                                           FG_CD       = '2'                AND
+                                           PSREL_CD IN ('1', '2')
+                                       ) AND
+                      DOCU.TCORP_CD IN (
+                                         SELECT
+                                           CORP_CD
+                                         FROM CA_ACPE_MST
+                                         WHERE
+                                           CONSGRP_CD     = 'OTG'     AND
+                                           SETTL_YM       = (SELECT LYSETTL_YM AS SETTL_YM  FROM CA_PREV_INFO  WHERE  SETTL_YM = '201712')       AND
+                                           FG_CD          = '2'                AND
+                                           PSREL_CD IN ('1', '2')
+                                        ) AND
+                      DOCU.DOCU_ST = '2' AND
+                     (
+                       (DOCU.DOCU_CD = 'M01') OR  (TP.ADJT_TP = '2' AND DOCU.DOCU_CD <> 'M01')
+                     )
+                   GROUP BY
+                        DOCU.ACCT_CD
+                  UNION ALL
+                    SELECT
+                        (SELECT ACCT_CD AS ACGRP_CD FROM CA_COA_MST WHERE GAAP_CD = '1'    AND ACCT_FG = '5' ) AS ACCT_CD,
+                         SUM(COALESCE(DOCU.DR_AMT, 0))    AS DR_AMT,
+                         SUM(COALESCE(DOCU.CR_AMT, 0))    AS CR_AMT
+                    FROM  CA_DOCU_MST DOCU
+                    INNER JOIN CA_DOCUTP_MST TP
+                        ON  DOCU.DOCU_CD = TP.DOCU_CD
+                    INNER JOIN  CA_COA_MST COA
+                        ON  DOCU.ACCT_CD = COA.ACCT_CD AND
+                            COA.GAAP_CD  = '1'
+                    INNER JOIN CA_ACGRP_DTL DTL
+                        ON 'D0012' = DTL.FORM_CD           AND
+                            COA.ROOT_ACCT_CD = DTL.ACCT_CD AND
+                            DTL.GAAP_CD = '1'
+                    INNER JOIN CA_ACGRP_MST MST
+                        ON DTL.FORM_CD = MST.FORM_CD AND
+                           DTL.ACGRP_CD = MST.ACGRP_CD AND
+                           MST.GAAP_CD = '1'
+                    WHERE
+                        DOCU.CONSGRP_CD  = 'OTG'          AND
+                        DOCU.DOCU_ST     = '2'                      AND
+                        DOCU.SETTL_YM    = (SELECT LYSETTL_YM AS SETTL_YM  FROM CA_PREV_INFO  WHERE  SETTL_YM = '201712') AND
+                       (
+                         (
+                           DOCU.SCORP_CD IN (
+                                               SELECT
+                                                 CORP_CD AS SCORP_CD
+                                               FROM CA_ACPE_MST
+                                               WHERE
+                                                  SETTL_YM   = (SELECT LYSETTL_YM AS SETTL_YM  FROM CA_PREV_INFO  WHERE  SETTL_YM = '201712')    AND
+                                                  CONSGRP_CD = 'OTG'  AND
+                                                  FG_CD      = '2'
+                                             ) AND
+                           DOCU.TCORP_CD IN (
+                                               SELECT
+                                                 CORP_CD AS TCORP_CD
+                                               FROM CA_ACPE_MST
+                                               WHERE
+                                                 SETTL_YM   =  (SELECT LYSETTL_YM AS SETTL_YM  FROM CA_PREV_INFO  WHERE  SETTL_YM = '201712')    AND
+                                                 CONSGRP_CD = 'OTG'  AND
+                                                 FG_CD      = '2'
+                                             ) AND
+                           TP.ADJT_TP = '1'
+                         ) OR
+                        (
+                          DOCU.SCORP_CD  IN (
+                                              SELECT
+                                                CORP_CD AS SCORP_CD
+                                              FROM CA_ACPE_MST
+                                              WHERE
+                                                SETTL_YM      =  (SELECT LYSETTL_YM AS SETTL_YM  FROM CA_PREV_INFO  WHERE  SETTL_YM = '201712')     AND
+                                                CONSGRP_CD    =   'OTG'  AND
+                                                FG_CD         =    '2'             AND
+                                                 PSREL_CD IN ('1', '2')
+                         ) AND
+                          DOCU.TCORP_CD IN (
+                                             SELECT
+                                               CORP_CD AS TCORP_CD
+                                             FROM CA_ACPE_MST
+                                             WHERE
+                                               SETTL_YM   = (SELECT LYSETTL_YM AS SETTL_YM  FROM CA_PREV_INFO  WHERE  SETTL_YM = '201712')       AND
+                                               CONSGRP_CD = 'OTG'    AND
+                                               FG_CD      = '2'                AND
+                                               PSREL_CD IN ('1', '2')
+                                            ) AND
+                                            ((DOCU.DOCU_CD = 'M01') OR (TP.ADJT_TP = '2' AND DOCU.DOCU_CD <> 'M01'))
+                                           )
+                         ) AND MST.ACGRP_FG IN ('831', '836', '849', '850','832', '834', '837', '839', '861', '862', '863', '881', '882', '883', '901', '902', '903', '921', '922', '923')
+                       GROUP BY
+                          DOCU.DOCU_CD
+                ) DOCU
+                LEFT OUTER JOIN T_GET_ACCT COA
+                    ON DOCU.ACCT_CD = COA.ACCT_CD
+                GROUP BY DOCU.ACCT_CD, COA.DRCR_CD
+                ORDER BY DOCU.ACCT_CD
+                ),
+                T_HAP_AMT_PREV AS (
+                     SELECT
+                        COA.UP_LINK_CD AS ACCT_CD,
+                         SUM(ACCT.CR_AMT) CR_AMT,
+                         SUM(ACCT.DR_AMT) DR_AMT
+                     FROM  T_ACCT_AMT_PREV ACCT
+                     LEFT OUTER JOIN T_GET_ACCT COA
+                          ON COA.ACCT_CD = ACCT.ACCT_CD
+                     GROUP BY
+                        COA.UP_LINK_CD
+                ),
+                T_ACCT_AMT AS (
+                     SELECT
+                        DOCU.ACCT_CD,
+                        COA.DRCR_CD,
+                        SUM(COALESCE(DOCU.DR_AMT, 0)) DR_AMT,
+                        SUM(COALESCE(DOCU.CR_AMT, 0)) CR_AMT
+                     FROM
+                    (
+                      SELECT
+                        DOCU.ACCT_CD,
+                        SUM(COALESCE(DOCU.DR_AMT, 0)) AS DR_AMT,
+                        SUM(COALESCE(DOCU.CR_AMT, 0)) AS CR_AMT
+                      FROM CA_DOCU_MST DOCU
+                      INNER JOIN CA_DOCUTP_MST TP
+                          ON DOCU.DOCU_CD = TP.DOCU_CD
+                      WHERE
+                          DOCU.CONSGRP_CD = 'OTG'   AND
+                          DOCU.SETTL_YM   = '201712'     AND
+                          DOCU.SCORP_CD IN (
+                                             SELECT
+                                                CORP_CD
+                                             FROM CA_ACPE_MST
+                                             WHERE
+                                                CONSGRP_CD  = 'OTG'   AND
+                                                SETTL_YM    = '201712'     AND
+                                                FG_CD       = '2'
+                                            ) AND
+                           DOCU.TCORP_CD IN (
+                                              SELECT
+                                                CORP_CD
+                                               FROM CA_ACPE_MST
+                                               WHERE
+                                                 CONSGRP_CD  = 'OTG'   AND
+                                                 SETTL_YM    = '201712'     AND
+                                                 FG_CD       = '2'
+                                             ) AND
+                            DOCU.DOCU_ST = '2' AND
+                            TP.ADJT_TP = '1'
+                         GROUP BY
+                            DOCU.ACCT_CD
+                         UNION ALL
+                          SELECT
+                             DOCU.ACCT_CD,
+                             SUM(COALESCE(DOCU.DR_AMT, 0)) AS DR_AMT,
+                             SUM(COALESCE(DOCU.CR_AMT, 0)) AS CR_AMT
+                           FROM CA_DOCU_MST DOCU
+                           INNER JOIN CA_DOCUTP_MST TP
+                                ON DOCU.DOCU_CD = TP.DOCU_CD
+                           WHERE
+                               DOCU.CONSGRP_CD = 'OTG'  AND
+                               DOCU.SETTL_YM   = '201712'    AND
+                               DOCU.SCORP_CD IN (
+                                                  SELECT
+                                                     CORP_CD
+                                                  FROM CA_ACPE_MST
+                                                  WHERE
+                                                     CONSGRP_CD  = 'OTG'     AND
+                                                     SETTL_YM    = '201712'       AND
+                                                     FG_CD       = '2'                 AND
+                                                     PSREL_CD IN ('1', '2')
+                                                ) AND
+                               DOCU.TCORP_CD IN (
+                                                  SELECT
+                                                    CORP_CD
+                                                  FROM CA_ACPE_MST
+                                                  WHERE
+                                                    CONSGRP_CD   = 'OTG'    AND
+                                                    SETTL_YM     = '201712'      AND
+                                                    FG_CD        = '2'                AND
+                                                    PSREL_CD IN ('1', '2')
+                                        ) AND
+                             DOCU.DOCU_ST = '2' AND
+                            (
+                               (DOCU.DOCU_CD = 'M01') OR  (TP.ADJT_TP = '2' AND DOCU.DOCU_CD <> 'M01')
+                            )
+                           GROUP BY
+                                DOCU.ACCT_CD
+                            UNION ALL
+                            SELECT
+                                (SELECT ACCT_CD AS ACGRP_CD FROM CA_COA_MST WHERE GAAP_CD = '1'    AND ACCT_FG = '5') AS ACCT_CD,
+                                 SUM(COALESCE(DOCU.DR_AMT, 0))    AS DR_AMT,
+                                 SUM(COALESCE(DOCU.CR_AMT, 0))    AS CR_AMT
+                               FROM  CA_DOCU_MST DOCU
+                               INNER JOIN CA_DOCUTP_MST TP
+                                    ON  DOCU.DOCU_CD = TP.DOCU_CD
+                                INNER JOIN  CA_COA_MST COA
+                                    ON  DOCU.ACCT_CD = COA.ACCT_CD AND
+                                          COA.GAAP_CD    = '1'
+                                INNER JOIN CA_ACGRP_DTL DTL
+                                    ON 'D0012' = DTL.FORM_CD            AND
+                                         COA.ROOT_ACCT_CD = DTL.ACCT_CD AND
+                                         DTL.GAAP_CD = '1'
+                                INNER JOIN CA_ACGRP_MST MST
+                                    ON DTL.FORM_CD  = MST.FORM_CD  AND
+                                       DTL.ACGRP_CD = MST.ACGRP_CD AND
+                                       MST.GAAP_CD  = '1'
+                                WHERE
+                                     DOCU.CONSGRP_CD  = 'OTG'          AND
+                                     DOCU.DOCU_ST     = '2'                      AND
+                                     DOCU.SETTL_YM    = '201712'            AND
+                                   (
+                                     (
+                                        DOCU.SCORP_CD IN (
+                                                           SELECT
+                                                             CORP_CD AS SCORP_CD
+                                                           FROM CA_ACPE_MST
+                                                           WHERE
+                                                             SETTL_YM   =  '201712'   AND
+                                                             CONSGRP_CD = 'OTG'  AND
+                                                             FG_CD      = '2'
+                                                          ) AND
+                                         DOCU.TCORP_CD IN (
+                                                            SELECT
+                                                              CORP_CD AS TCORP_CD
+                                                            FROM CA_ACPE_MST
+                                                            WHERE
+                                                              SETTL_YM   =  '201712'   AND
+                                                              CONSGRP_CD = 'OTG'  AND
+                                                              FG_CD      = '2'
+                                                  ) AND
+                                 TP.ADJT_TP = '1'
+                                 )    OR
+                                    (
+                                      DOCU.SCORP_CD  IN (
+                                                          SELECT
+                                                             CORP_CD AS SCORP_CD
+                                                          FROM CA_ACPE_MST
+                                                          WHERE
+                                                             SETTL_YM      =   '201712'    AND
+                                                             CONSGRP_CD    =   'OTG'  AND
+                                                             FG_CD         =    '2'             AND
+                                                             PSREL_CD IN ('1', '2')
+                              ) AND
+                                  DOCU.TCORP_CD IN (
+                                                         SELECT
+                                                            CORP_CD AS TCORP_CD
+                                                         FROM    CA_ACPE_MST
+                                                         WHERE
+                                                            SETTL_YM   =  '201712'       AND
+                                                            CONSGRP_CD = 'OTG'      AND
+                                                            FG_CD      = '2'                  AND
+                                                    PSREL_CD IN ('1', '2')
+                                                    ) AND
+                                                   ((DOCU.DOCU_CD = 'M01') OR (TP.ADJT_TP = '2' AND DOCU.DOCU_CD <> 'M01'))
+                                                                            )
+                                     ) AND MST.ACGRP_FG IN ('831', '836', '849', '850','832', '834', '837', '839', '861', '862', '863', '881', '882', '883', '901', '902', '903', '921', '922', '923')
+                                   GROUP BY
+                                        DOCU.DOCU_CD
+                        ) DOCU
+                        LEFT OUTER JOIN T_GET_ACCT COA
+                            ON DOCU.ACCT_CD = COA.ACCT_CD
+                        GROUP BY
+                                DOCU.ACCT_CD, COA.DRCR_CD
+                        ORDER BY
+                                DOCU.ACCT_CD
+                ),
+                T_HAP_AMT AS (
+                     SELECT
+                        COA.UP_LINK_CD AS ACCT_CD,
+                         SUM(ACCT.CR_AMT) CR_AMT,
+                         SUM(ACCT.DR_AMT) DR_AMT
+                     FROM  T_ACCT_AMT ACCT
+                     LEFT OUTER JOIN T_GET_ACCT COA
+                          ON COA.ACCT_CD = ACCT.ACCT_CD
+                     GROUP BY
+                        COA.UP_LINK_CD
+                ),
+                T_CONS_AMT AS (
+                       SELECT
+                            RES.CAL_TP, RES.ACCT_CD, RES.ACCT_NM, RES.FULL_ACCT_NM,
+                            RES.ROOT_ACCT_CD, RES.UP_LINK_CD, RES.DRCR_CD, RES.ACTYPE_CD, RES.FILL_YN,
+                            RES.DR_AMT_PREV, RES.CR_AMT_PREV,
+                            CASE
+                                WHEN RES.DRCR_CD = '1' THEN RES.DR_AMT_PREV - RES.CR_AMT_PREV
+                                ELSE RES.CR_AMT_PREV - RES.DR_AMT_PREV
+                             END AMT_PREV,
+                             RES.DR_AMT, RES.CR_AMT,
+                            CASE
+                                WHEN RES.DRCR_CD = '1' THEN RES.DR_AMT - RES.CR_AMT
+                                ELSE RES.CR_AMT - RES.DR_AMT
+                             END AMT_THIS
+                       FROM
+                       (
+                        SELECT
+                            ACCT.CAL_TP, ACCT.ACCT_CD, ACCT.ACCT_NM, ACCT.FULL_ACCT_NM,
+                            ACCT.ROOT_ACCT_CD, ACCT.UP_LINK_CD, ACCT.DRCR_CD, ACCT.ACTYPE_CD, ACCT.FILL_YN,
+                            CASE
+                                WHEN ACCT.FILL_YN = 'N' THEN COALESCE(PHAMT.DR_AMT, 0)
+                                ELSE  COALESCE(PAAMT.DR_AMT, 0)
+                            END DR_AMT_PREV,
+                            CASE
+                                WHEN ACCT.FILL_YN = 'N' THEN COALESCE(PHAMT.CR_AMT, 0)
+                                ELSE  COALESCE(PAAMT.CR_AMT, 0)
+                            END CR_AMT_PREV,
+                            CASE
+                                WHEN ACCT.FILL_YN = 'N' THEN COALESCE(HAMT.DR_AMT, 0)
+                                ELSE  COALESCE(AAMT.DR_AMT, 0)
+                            END DR_AMT,
+                            CASE
+                                WHEN ACCT.FILL_YN = 'N' THEN COALESCE(HAMT.CR_AMT, 0)
+                                ELSE  COALESCE(AAMT.CR_AMT, 0)
+                            END CR_AMT
+                        FROM T_GET_ACCT ACCT
+                        LEFT OUTER JOIN T_ACCT_AMT AAMT ON ACCT.ACCT_CD = AAMT.ACCT_CD
+                        LEFT OUTER JOIN T_HAP_AMT HAMT ON HAMT.ACCT_CD = ACCT.ACCT_CD
+                        LEFT OUTER JOIN T_ACCT_AMT_PREV PAAMT ON ACCT.ACCT_CD = PAAMT.ACCT_CD
+                        LEFT OUTER JOIN T_HAP_AMT_PREV PHAMT ON PHAMT.ACCT_CD = ACCT.ACCT_CD
+                     ) RES
+                ),
+                T_GET_AMT AS (
+                    SELECT
+                        MST.ACGRP_CD      AS ACGRP_CD,
+                        SUM(AMT_PREV)    AS AMT_PREV,
+                        SUM(AMT_THIS)    AS AMT_THIS,
+                        CH.COL
+                    FROM T_GET_CH_ACCT CH
+                    INNER JOIN CA_ACGRP_MST MST
+                                ON MST.FORM_CD = 'D0022'        AND
+                                   CH.ACGRP_CD = MST.ACGRP_CD   AND
+                                   MST.GAAP_CD = '1'
+                    INNER JOIN CA_ACGRP_MST INFO
+                                ON  MST.FORM_CD = INFO.FORM_CD            AND
+                                      MST.ROOT_GRP_CD = INFO.ROOT_GRP_CD  AND
+                                      MST.ACGRP_LV <= INFO.ACGRP_LV    AND
+                                      MST.PRINT_NO = SUBSTRING(INFO.PRINT_NO, 1, LENGTH(MST.PRINT_NO)) AND
+                                      MST.GAAP_CD = '1'
+                    INNER JOIN CA_ACGRP_DTL DTL
+                                ON  INFO.FORM_CD  = DTL.FORM_CD  AND
+                                    INFO.ACGRP_CD = DTL.ACGRP_CD AND
+                                    DTL.GAAP_CD = '1'
+                    INNER JOIN CA_COA_MST COA
+                                ON  DTL.ACCT_CD = COA.ROOT_ACCT_CD AND
+                                    COA.GAAP_CD = '1'
+                    INNER JOIN  T_CONS_AMT AMT ON COA.ACCT_CD = AMT.ACCT_CD   AND AMT.FILL_YN = 'Y'
+                    LEFT OUTER JOIN T_GET_CH_ACCT CHA
+                        ON CHA.ACGRP_CD = MST.ACGRP_CD
+                    GROUP BY
+                        MST.ACGRP_CD, CH.COL
+                    ORDER BY
+                        MST.ACGRP_CD
+                ),
+                   GET_ACGRP  AS
+                    (
+                          SELECT
+                               MAX(ACGRP_CD) ACGRP_CD,
+                               '842' AS ACGRP_FG,
+                               DRCR_CD
+                           FROM CA_ACGRP_MST
+                           WHERE
+                                ACGRP_FG      = '842'           AND
+                                FORM_CD       = 'D0032'         AND
+                                CAL_TP        = '3'             AND
+                                GAAP_CD       = '1'
+                           GROUP BY
+                                DRCR_CD
+                          UNION ALL
+                           SELECT
+                               MAX(ACGRP_CD) ACGRP_CD,
+                               '850' AS ACGRP_FG,
+                               DRCR_CD
+                           FROM CA_ACGRP_MST
+                           WHERE
+                                 ACGRP_FG      = '850'          AND
+                                 FORM_CD       = 'D0032'        AND
+                                 GAAP_CD       = '1'
+                           GROUP BY
+                                DRCR_CD
+                                UNION ALL
+                           SELECT
+                               MAX(ACGRP_CD) ACGRP_CD,
+                               '849' AS ACGRP_FG,
+                               DRCR_CD
+                           FROM CA_ACGRP_MST
+                           WHERE
+                                 ACGRP_FG      = '849'          AND
+                                 FORM_CD       = 'D0032'        AND
+                                 GAAP_CD       = '1'
+                           GROUP BY
+                                DRCR_CD
+                    ),
+                    GET_AMT AS (
+                SELECT
+                       CAL.CAL_ACGRP_CD,
+                       AMT.ACGRP_CD,
+                       CASE WHEN AMT.DRCR_CD = '1' THEN SUM(COALESCE(AMT.DR_AMT, 0)) - SUM(COALESCE(AMT.CR_AMT, 0))
+                            ELSE SUM(COALESCE(AMT.CR_AMT, 0)) - SUM(COALESCE(AMT.DR_AMT, 0)) END ACG_AMT
+                FROM
+                (
+                    SELECT
+                                D.ACGRP_CD,
+                                D.DRCR_CD,
+                                SUM(COALESCE(A.DR_AMT, 0))    AS DR_AMT,
+                                SUM(COALESCE(A.CR_AMT, 0))    AS CR_AMT
+                    FROM  CA_DOCU_MST  A
+                    INNER JOIN  CA_COA_MST     E ON E.GAAP_CD = '1' AND A.ACCT_CD = E.ACCT_CD
+                    INNER JOIN  CA_ACGRP_DTL   C ON E.GAAP_CD = C.GAAP_CD AND 'D0032' = C.FORM_CD AND E.ROOT_ACCT_CD = C.ACCT_CD
+                    INNER JOIN CA_ACGRP_MST    D ON C.GAAP_CD = D.GAAP_CD AND C.FORM_CD = D.FORM_CD AND C.ACGRP_CD = D.ACGRP_CD
+                    INNER JOIN  CA_DOCUTP_MST  B ON  A.DOCU_CD = B.DOCU_CD
+                    WHERE
+                                A.CONSGRP_CD   =    'OTG'    AND
+                                A.SETTL_YM     =    '201712'      AND
+                             (  A.SCORP_CD IN    ( SELECT   CORP_CD   FROM    CA_ACPE_MST WHERE  SETTL_YM  =  '201712'  AND CONSGRP_CD  =  'OTG'  AND FG_CD = '2' )  AND
+                                A.TCORP_CD IN    ( SELECT   CORP_CD   FROM    CA_ACPE_MST WHERE  SETTL_YM  =  '201712'  AND CONSGRP_CD  =  'OTG'  AND FG_CD = '2' )  AND
+                                A.DOCU_ST    = '2'    AND
+                                B.ADJT_TP    = '1'
+                             )
+                    GROUP BY  D.ACGRP_CD, D.DRCR_CD
+                    UNION ALL
+                    SELECT
+                            D.ACGRP_CD,
+                            D.DRCR_CD,
+                            SUM(COALESCE(A.DR_AMT, 0))    AS DR_AMT,
+                            SUM(COALESCE(A.CR_AMT, 0))    AS CR_AMT
+                      FROM        CA_DOCU_MST   A
+                      INNER JOIN  CA_COA_MST    E ON E.GAAP_CD = '1' AND A.ACCT_CD = E.ACCT_CD
+                      INNER JOIN  CA_ACGRP_DTL  C ON E.GAAP_CD = C.GAAP_CD AND 'D0032' = C.FORM_CD AND E.ROOT_ACCT_CD = C.ACCT_CD
+                      INNER JOIN  CA_ACGRP_MST  D ON C.GAAP_CD = D.GAAP_CD AND C.FORM_CD = D.FORM_CD AND C.ACGRP_CD = D.ACGRP_CD
+                      INNER JOIN  CA_DOCUTP_MST B ON A.DOCU_CD = B.DOCU_CD
+                        WHERE
+                             A.CONSGRP_CD =  'OTG'    AND
+                             A.SETTL_YM   =  '201712'      AND
+                             A.SCORP_CD IN ( SELECT   CORP_CD  FROM  CA_ACPE_MST  WHERE  CONSGRP_CD  =  'OTG'  AND  SETTL_YM  =  '201712'  AND  FG_CD  = '2'  AND  PSREL_CD  IN  ('1', '2')) AND
+                             A.TCORP_CD IN ( SELECT   CORP_CD  FROM  CA_ACPE_MST  WHERE  CONSGRP_CD  =  'OTG'  AND  SETTL_YM  =  '201712'  AND  FG_CD  = '2'  AND  PSREL_CD  IN  ('1', '2')) AND
+                             A.DOCU_ST   = '2'    AND
+                          ( (A.DOCU_CD  = 'M01') OR (B.ADJT_TP = '2' AND A.DOCU_CD <>'M01'))
+                      GROUP BY  D.ACGRP_CD, D.DRCR_CD
+                ) AMT
+                LEFT OUTER JOIN CA_GRPCAL_MST CAL ON CAL.GAAP_CD = '1' AND CAL.FORM_CD = 'D0032' AND CAL.ACGRP_CD = AMT.ACGRP_CD
+                GROUP BY AMT.ACGRP_CD, AMT.DRCR_CD, CAL.CAL_ACGRP_CD
+                ),
+                    GET_CAL_AMT AS
+                    (
+                      SELECT
+                           COL.ACGRP_FG, COL.ACGRP_CD, COL.ACG_AMT, CH.COL
+                        FROM
+                       (
+                         SELECT
+                          '842'             AS ACGRP_FG,
+                           CAL.CAL_ACGRP_CD AS ACGRP_CD,
+                           SUM(CAL.ACG_AMT) AS ACG_AMT
+                          FROM
+                         (
+                           SELECT
+                             AMT.CAL_ACGRP_CD,
+                             AMT.ACGRP_CD,
+                             CASE
+                                WHEN ACG.DRCR_CD = '1' THEN -AMT.ACG_AMT
+                                ELSE AMT.ACG_AMT
+                             END ACG_AMT
+                            FROM GET_AMT AMT
+                            LEFT OUTER JOIN CA_ACGRP_MST ACG
+                                ON ACG.GAAP_CD  = '1' AND
+                                   ACG.FORM_CD  = 'D0032'      AND
+                                   ACG.ACGRP_CD = AMT.ACGRP_CD
+                            WHERE
+                                CAL_ACGRP_CD = (SELECT ACGRP_CD FROM GET_ACGRP WHERE ACGRP_FG = '842')
+                          ) CAL
+                          GROUP BY
+                            CAL.CAL_ACGRP_CD
+                                UNION ALL
+                          SELECT
+                                '850' AS ACGRP_FG,
+                            (SELECT MIN(ACGRP_CD) FROM CA_ACGRP_MST WHERE FORM_CD = 'D0022' AND ACGRP_FG = '826' AND GAAP_CD = '1') AS ACGRP_CD,
+                             RES.ACG_AMT
+                            FROM
+                           (
+                            SELECT
+                              SUM(DOM.ACG_AMT) ACG_AMT
+                              FROM
+                             (
+                               SELECT
+                                 SUM(CAL.ACG_AMT) ACG_AMT
+                                 FROM
+                                (
+                                  SELECT
+                                    AMT.CAL_ACGRP_CD,
+                                    AMT.ACGRP_CD,
+                                    CASE
+                                        WHEN ACG.DRCR_CD = '1' THEN -AMT.ACG_AMT
+                                        ELSE AMT.ACG_AMT
+                                    END ACG_AMT
+                                   FROM GET_AMT AMT
+                                   LEFT OUTER JOIN CA_ACGRP_MST ACG
+                                         ON ACG.GAAP_CD  = '1'  AND
+                                                ACG.FORM_CD  = 'D0032'           AND
+                                                ACG.ACGRP_CD = AMT.ACGRP_CD
+                                   WHERE
+                                     CAL_ACGRP_CD = (SELECT ACGRP_CD FROM GET_ACGRP WHERE ACGRP_FG = '842')
+                                 ) CAL
+                                 UNION ALL
+                                 SELECT
+                                   -SUM(CAL.ACG_AMT) ACG_AMT
+                                   FROM
+                                  (
+                                    SELECT
+                                      AMT.CAL_ACGRP_CD,
+                                      AMT.ACGRP_CD,
+                                      CASE
+                                        WHEN ACG.DRCR_CD = '1' THEN AMT.ACG_AMT
+                                        ELSE -AMT.ACG_AMT
+                                      END ACG_AMT
+                                     FROM GET_AMT AMT
+                                     LEFT OUTER JOIN CA_ACGRP_MST ACG
+                                        ON  ACG.GAAP_CD  = '1' AND
+                                                ACG.FORM_CD  = 'D0032'      AND
+                                                ACG.ACGRP_CD = AMT.ACGRP_CD
+                                     WHERE
+                                       AMT.ACGRP_CD = (SELECT ACGRP_CD FROM GET_ACGRP WHERE ACGRP_FG = '849')
+                                   ) CAL
+                                ) DOM
+                              ) RES
+                              UNION ALL
+                                  SELECT
+                                '849'              AS ACGRP_FG,
+                                (SELECT MAX(ACGRP_CD) ACGRP_CD FROM CA_ACGRP_MST WHERE FORM_CD = 'D0022' AND ACGRP_FG = '828' AND GAAP_CD = '1')      AS ACGRP_CD,
+                                SUM(CAL.ACG_AMT)   AS ACG_AMT
+                              FROM
+                             (
+                               SELECT
+                                  AMT.CAL_ACGRP_CD,
+                                  AMT.ACGRP_CD,
+                                  CASE
+                                        WHEN ACG.DRCR_CD = '1' THEN AMT.ACG_AMT
+                                        ELSE -AMT.ACG_AMT
+                                  END ACG_AMT
+                                FROM GET_AMT AMT
+                                LEFT OUTER JOIN CA_ACGRP_MST ACG
+                                        ON  ACG.GAAP_CD  = '1' AND
+                                                ACG.FORM_CD  = 'D0032'      AND
+                                                ACG.ACGRP_CD = AMT.ACGRP_CD
+                                WHERE
+                                        AMT.ACGRP_CD =  (SELECT ACGRP_CD FROM GET_ACGRP WHERE ACGRP_FG = '849')
+                                   ) CAL
+                                   GROUP BY
+                                     CAL.ACGRP_CD
+                    ) COL
+                    LEFT OUTER JOIN T_GET_CH_ACCT CH
+                        ON CH.ACGRP_CD = COL.ACGRP_CD
+                  ),
+                T_GET_CALC_BS_PREV AS
+                (
+                         SELECT
+                           PREV.COL_NUM,
+                           PREV.CEACCT_CD,
+                           PREV.COACGRP_CD,
+                           SUM(DR_AMT_PREV) DR_AMT_PREV,
+                           SUM(CR_AMT_PREV) CR_AMT_PREV,
+                           SUM(AMT_PREV)    AMT_PREV,
+                           PREV.COL
+                     FROM
+                    (
+                      SELECT
+                         CASE
+                                WHEN SUBSTRING(CECOA.CEACCT_CD, 0, 1) = 'A' THEN 1
+                                ELSE 3
+                         END COL_NUM,
+                             CECOA.CEACCT_CD,
+                             CECOA.COACGRP_CD,
+                             CECOA.COACCT_CD,
+                             AMT.DR_AMT_PREV,
+                             AMT.CR_AMT_PREV,
+                             AMT.AMT_PREV,
+                             CH.COL
+                           FROM CA_CECOA_MST CECOA
+                           LEFT OUTER JOIN (
+                                             SELECT
+                                                ACCT_CD, DRCR_CD, DR_AMT_PREV, CR_AMT_PREV, AMT_PREV
+                                               FROM  T_CONS_AMT
+                                              WHERE
+                                                ACCT_CD IN (
+                                                             SELECT
+                                                                COACCT_CD
+                                                               FROM CA_CECOA_MST
+                                                              WHERE
+                                                                USE_YN = 'Y'     AND
+                                                                DATASRC_CD = '1'
+                                                             )
+                                            ) AMT ON CECOA.COACCT_CD = AMT.ACCT_CD
+                           LEFT OUTER JOIN T_GET_CH_ACCT CH
+                               ON CH.ACGRP_CD =  CECOA.COACGRP_CD
+                           LEFT OUTER JOIN (
+                                             SELECT
+                                               GR.CEACCT_CD, GR.COACGRP_CD, SUM(GR.BOOK_AMT) AS AM_BK, CH.COL
+                                               FROM CA_CE_GR    GR
+                                               LEFT OUTER JOIN T_GET_CH_ACCT CH
+                                                   ON GR.COACGRP_CD = CH.ACGRP_CD
+                                               WHERE
+                                                 GR.SETTL_YM  = (SELECT LYSETTL_YM AS SETTL_YM  FROM CA_PREV_INFO  WHERE  SETTL_YM = '201712')   AND
+                                             GR.CONSGRP_CD = 'OTG'      AND
+                                             CH.COL IS NOT NULL
+                                               GROUP BY
+                                                 GR.CEACCT_CD, GR.COACGRP_CD,  CH.COL
+                                            ) GR ON CECOA.CEACCT_CD = GR.CEACCT_CD AND CECOA.COACGRP_CD = GR.COACGRP_CD
+                              WHERE
+                                 CECOA.USE_YN     = 'Y' AND
+                                 CECOA.DATASRC_CD = '1' AND
+                                 COALESCE(AMT.DR_AMT_PREV, 0) - COALESCE(AMT.CR_AMT_PREV, 0) <> 0
+                           ) PREV
+                           GROUP BY
+                             PREV.COL_NUM, PREV.CEACCT_CD, PREV.COACGRP_CD, PREV.COL
+                ),
+                T_GET_CALC_BS AS
+                (
+                   SELECT
+                     THIS.COL_NUM,
+                     THIS.CEACCT_CD,
+                     THIS.COACGRP_CD,
+                     SUM(DR_AMT) DR_AMT,
+                     SUM(CR_AMT) CR_AMT,
+                     SUM(AMT_THIS) AMT_THIS,
+                     THIS.COL
+                   FROM
+                  (
+                     SELECT
+                        CASE
+                                WHEN SUBSTRING(CECOA.CEACCT_CD, 0, 1) = 'A' THEN 1
+                                ELSE 3
+                        END COL_NUM,
+                        CECOA.CEACCT_CD,
+                        CECOA.COACGRP_CD,
+                        CECOA.COACCT_CD,
+                        AMT.DR_AMT,
+                        AMT.CR_AMT,
+                        AMT.AMT_THIS,
+                        CH.COL
+                      FROM CA_CECOA_MST CECOA
+                      LEFT OUTER JOIN (
+                                        SELECT
+                                          ACCT_CD, DRCR_CD, DR_AMT, CR_AMT, AMT_THIS
+                                          FROM T_CONS_AMT
+                                         WHERE
+                                          ACCT_CD IN (
+                                                       SELECT
+                                                          COACCT_CD
+                                                        FROM CA_CECOA_MST
+                                                        WHERE
+                                                           USE_YN     = 'Y'  AND
+                                                           DATASRC_CD = '1'
+                                                      )
+                                       ) AMT ON CECOA.COACCT_CD = AMT.ACCT_CD
+                       LEFT OUTER JOIN T_GET_CH_ACCT CH
+                           ON CH.ACGRP_CD =  CECOA.COACGRP_CD
+                       LEFT OUTER JOIN (
+                                         SELECT
+                                           GR.CEACCT_CD, GR.COACGRP_CD, SUM(GR.BOOK_AMT) AS AM_BK, CH.COL
+                                          FROM CA_CE_GR    GR
+                                          LEFT OUTER JOIN T_GET_CH_ACCT CH
+                                                 ON GR.COACGRP_CD = CH.ACGRP_CD
+                                          WHERE
+                                            GR.SETTL_YM    = '201712'   AND
+                                            GR.CONSGRP_CD  = 'OTG' AND
+                                            CH.COL IS NOT NULL
+                                      GROUP BY
+                                        GR.CEACCT_CD, GR.COACGRP_CD,  CH.COL
+                                    ) GR ON CECOA.CEACCT_CD = GR.CEACCT_CD AND CECOA.COACGRP_CD = GR.COACGRP_CD
+                    WHERE
+                       CECOA.USE_YN     = 'Y' AND
+                       CECOA.DATASRC_CD = '1' AND
+                           COALESCE(AMT.DR_AMT, 0) - COALESCE(AMT.CR_AMT, 0) <> 0
+                      ) THIS
+                      GROUP BY
+                        THIS.COL_NUM, THIS.CEACCT_CD, THIS.COACGRP_CD, THIS.COL
+                ),
+                T_GET_INV_ACCT AS (
+                   SELECT
+                     DOCU.ACCT_CD, DOCU.DOCU_CD,
+                     SUM(COALESCE(DOCU.CR_AMT, 0)) - SUM(COALESCE(DOCU.DR_AMT, 0)) AS AM_BK
+                FROM CA_DOCU_MST DOCU
+                INNER JOIN CA_DOCUTP_MST TP
+                    ON DOCU.DOCU_CD = TP.DOCU_CD
+                     WHERE
+                        DOCU.CONSGRP_CD = 'OTG'       AND
+                        DOCU.SETTL_YM   = '201712'         AND
+                        DOCU.SCORP_CD IN (
+                                           SELECT CORP_CD
+                                             FROM CA_ACPE_MST
+                                            WHERE
+                                             CONSGRP_CD = 'OTG'   AND
+                                             SETTL_YM   = '201712'     AND
+                                             FG_CD = '2'
+                                       ) AND
+                    DOCU.TCORP_CD IN (
+                                       SELECT CORP_CD
+                                        FROM CA_ACPE_MST
+                                       WHERE
+                                        CONSGRP_CD   = 'OTG'       AND
+                                        SETTL_YM     = '201712'         AND
+                                        FG_CD = '2'
+                                      ) AND
+                    DOCU.DOCU_ST = '2' AND
+                    DOCU.WRT_TP = '1'  AND
+                    DOCU.DOCU_CD IN (
+                                      SELECT
+                                         IRDS_CD
+                                       FROM CA_CECOA_MST
+                                      WHERE
+                                       USE_YN     = 'Y' AND
+                                       DATASRC_CD = '2'
+                                         ) AND
+                        DOCU.ACCT_CD IN (
+                                          SELECT
+                                             COACCT_CD
+                                            FROM CA_CECOA_MST
+                                           WHERE
+                                             USE_YN     = 'Y' AND
+                                             DATASRC_CD = '2'
+                                         )
+                        GROUP BY
+                          DOCU.ACCT_CD,  DOCU.DOCU_CD
+                ),
+                T_GET_INV_HAP AS (
+                     SELECT
+                        ACCT.DOCU_CD,
+                        COA.UP_LINK_CD AS ACCT_CD,
+                         SUM(ACCT.AM_BK) AM_BK
+                     FROM  T_GET_INV_ACCT ACCT
+                     LEFT OUTER JOIN T_GET_ACCT COA
+                          ON COA.ACCT_CD = ACCT.ACCT_CD
+                     GROUP BY
+                        ACCT.DOCU_CD, COA.UP_LINK_CD
+
+                     UNION ALL
+
+                     SELECT
+                        DOCU_CD,
+                        ACCT_CD,
+                        AM_BK
+                    FROM T_GET_INV_ACCT
+                ),
+                T_GET_INV_CAP AS
+           (
+                  SELECT
+                     RES.COL_NUM, RES.CEACCT_CD, RES.COACGRP_CD,
+                     SUM(AM_BK) AM_BK,
+                     RES.COL
+                  FROM
+                  (
+                     SELECT
+                        INV.COL_NUM, INV.CEACCT_CD, INV.COACGRP_CD, INV.COACCT_CD,
+                        CASE
+                             WHEN INV.COACGRP_CD = (SELECT MAX(ACGRP_CD) ACGRP_CD FROM CA_ACGRP_MST WHERE ACGRP_FG = '828' AND FORM_CD = 'D0022') AND INV.COACCT_CD = (SELECT ACCT1_CD  FROM CA_ACCTCONFIG_MST WHERE CONSGRP_CD = 'OTG' AND ADOCU_CD = '61' )
+                                THEN  INV.AM_BK
+                             WHEN INV.COACGRP_CD != (SELECT MAX(ACGRP_CD) ACGRP_CD FROM CA_ACGRP_MST WHERE ACGRP_FG = '828' AND FORM_CD = 'D0022')
+                                THEN  INV.AM_BK
+                        ELSE -INV.AM_BK END AM_BK,
+                        INV.COL
+                    FROM
+                    (
+                        SELECT
+                            CASE
+                               WHEN SUBSTRING(CE.CEACCT_CD, 0, 1) = 'A' THEN 1
+                               ELSE 3
+                            END COL_NUM,
+                            CE.CEACCT_CD, CE.COACGRP_CD, CE.COACCT_CD,
+                            CASE
+                               WHEN CE.IRDS_FG_CD = '1' THEN AMT.AM_BK
+                               WHEN CE.IRDS_FG_CD = '2' AND AMT.AM_BK > 0 THEN AMT.AM_BK
+                               WHEN CE.IRDS_FG_CD = '2' AND AMT.AM_BK < 0 THEN 0
+                               WHEN CE.IRDS_FG_CD = '3' AND AMT.AM_BK > 0 THEN 0
+                               WHEN CE.IRDS_FG_CD = '3' AND AMT.AM_BK < 0 THEN AMT.AM_BK
+                               ELSE AMT.AM_BK END AM_BK,
+                            CH.COL
+                        FROM CA_CECOA_MST CE
+                        LEFT OUTER JOIN T_GET_INV_HAP AMT
+                           ON CE.COACCT_CD = AMT.ACCT_CD AND CE.IRDS_CD = AMT.DOCU_CD
+                        LEFT OUTER JOIN T_GET_CH_ACCT CH
+                           ON CH.ACGRP_CD =  CE.COACGRP_CD
+                        LEFT OUTER JOIN (
+                                          SELECT
+                                             GR.CEACCT_CD,
+                                             GR.COACGRP_CD,
+                                             SUM(GR.BOOK_AMT)    AS AM_BK,
+                                             CH.COL
+                                           FROM  CA_CE_GR  GR
+                                           LEFT OUTER JOIN T_GET_CH_ACCT CH
+                                              ON GR.COACGRP_CD = CH.ACGRP_CD
+                                           WHERE
+                                              GR.SETTL_YM      = '201712'        AND
+                                              GR.CONSGRP_CD    = 'OTG'      AND
+                                              CH.COL IS NOT NULL
+                                           GROUP BY
+                                              GR.CEACCT_CD, GR.COACGRP_CD,  CH.COL
+                                     ) GR ON CE.CEACCT_CD = GR.CEACCT_CD AND CE.COACGRP_CD = GR.COACGRP_CD
+                       WHERE
+                         CE.USE_YN     = 'Y'   AND
+                         CE.DATASRC_CD = '2'   AND
+                         AMT.AM_BK IS NOT NULL
+                        ) INV
+                    ) RES
+                    GROUP BY
+                        RES.COL_NUM, RES.CEACCT_CD, RES.COACGRP_CD, RES.COL
+                ),
+                T_GET_IHCH AS (
+                    SELECT
+                        CE.CEACCT_CD,
+                        CE.COACGRP_CD,
+                        CE.COACCT_CD,
+                        CASE
+                           WHEN CE.IRDS_FG_CD = '1'
+                           THEN COALESCE(IHCH.AM_BK, 0)
+                            WHEN CE.IRDS_FG_CD = '2' AND COALESCE(IHCH.AM_BK, 0) > 0
+                            THEN COALESCE(IHCH.AM_BK, 0)
+                           WHEN CE.IRDS_FG_CD = '3' AND COALESCE(IHCH.AM_BK, 0) < 0
+                           THEN COALESCE(IHCH.AM_BK, 0)
+                            ELSE 0
+                        END    AS AM_BK,
+                        CH.COL
+                        FROM  CA_CECOA_MST   CE
+                        INNER JOIN (
+                                             SELECT
+                                                COA.ACCT_CD,
+                                                IHCH.IRDS_CD,
+                                                CASE
+                                                   WHEN COA.DRCR_CD = '1' THEN SUM(COALESCE(IHCH.DR_ACCT2_AMT, 0)) - SUM(COALESCE(IHCH.CR_ACCT2_AMT, 0))
+                                                   ELSE SUM(COALESCE(IHCH.CR_ACCT2_AMT, 0)) - SUM(COALESCE(IHCH.DR_ACCT2_AMT, 0))
+                                                END  AS AM_BK
+                                             FROM  CA_IHCH_MST IHCH
+                                             INNER JOIN CA_COA_MST COA
+                                                  ON COA.GAAP_CD = '1'        AND
+                                                     COA.ACCT_CD = IHCH.CAPL_COACCT_CD
+                                             WHERE
+                                              IHCH.CONSGRP_CD    =    'OTG'      AND
+                                              IHCH.SETTL_YM      =    '201712'
+                                         GROUP BY
+                                              COA.ACCT_CD, IHCH.IRDS_CD, COA.DRCR_CD
+                                    )  IHCH ON CE.COACCT_CD = IHCH.ACCT_CD AND IHCH.IRDS_CD = CE.IRDS_CD
+                          LEFT OUTER JOIN T_GET_CH_ACCT CH
+                                ON CH.ACGRP_CD =  CE.COACGRP_CD
+                           WHERE
+                                CE.DATASRC_CD     =   '4'      AND
+                                CE.USE_YN         =   'Y'
+                ),
+                T_GET_IHCH_HAP AS (
+                     SELECT
+                       IHCH.CEACCT_CD, IHCH.COACGRP_CD, IHCH.COL,
+                       SUM(IHCH.AM_BK) AM_BK
+                     FROM
+                     (
+                         SELECT
+                             ACCT.CEACCT_CD,
+                             ACCT.COACGRP_CD,
+                             COA.UP_LINK_CD AS ACCT_CD,
+                             SUM(ACCT.AM_BK) AM_BK,
+                             ACCT.COL
+                         FROM  T_GET_IHCH ACCT
+                         LEFT OUTER JOIN T_GET_ACCT COA
+                              ON COA.ACCT_CD = ACCT.COACCT_CD
+                         GROUP BY
+                            COA.UP_LINK_CD,  ACCT.CEACCT_CD, ACCT.COACGRP_CD, ACCT.COL
+                         UNION ALL
+                         SELECT
+                            CEACCT_CD,
+                            COACGRP_CD,
+                            COACCT_CD AS ACCT_CD,
+                            AM_BK,
+                            COL
+                        FROM T_GET_IHCH
+                    ) IHCH
+                    GROUP BY
+                        IHCH.CEACCT_CD, IHCH.COACGRP_CD, IHCH.COL
+                ),
+                T_CHG_AMT AS (
+                    SELECT
+                       GR.CEACCT_CD, GR.COACGRP_CD, SUM(GR.BOOK_AMT) BOOK_AMT, CH.COL
+                    FROM CA_CE_GR GR
+                    LEFT OUTER JOIN T_GET_CH_ACCT CH
+                        ON GR.COACGRP_CD = CH.ACGRP_CD
+                    WHERE
+                        GR.SETTL_YM     = '201712'    AND
+                        GR.CONSGRP_CD   = 'OTG'  AND
+                        GR.WRT_TP               = '1'
+                    GROUP BY
+                        GR.CEACCT_CD, GR.COACGRP_CD, CH.COL
+                ),
+            T_HAND_DOCU AS
+           (
+            SELECT
+               HND.COL_NUM, HND.CEACCT_CD, HND.COACGRP_CD, SUM(HND.DR_AMT) DR_AMT, SUM(HND.CR_AMT) CR_AMT, SUM(HND.AMT_THIS) AMT_THIS, HND.COL
+            FROM
+                (
+                 SELECT
+                   CASE
+                    WHEN SUBSTRING(CECOA.CEACCT_CD, 0, 1) = 'A' THEN 1
+                    ELSE 3
+                   END COL_NUM,
+                   CECOA.CEACCT_CD,
+                   CECOA.COACGRP_CD,
+                   CECOA.COACCT_CD,
+                   AMT.DR_AMT,
+                   AMT.CR_AMT,
+                   AMT.AMT_THIS,
+                   CH.COL
+                 FROM CA_CECOA_MST CECOA
+                 LEFT OUTER JOIN T_GET_CH_ACCT CH
+                  ON CH.ACGRP_CD = CECOA.COACGRP_CD
+                 LEFT OUTER JOIN (
+                                   SELECT
+                                     ACCT_CD, DR_AMT,  CR_AMT, AMT_THIS
+                                   FROM
+                                     (
+                                       SELECT
+                                         ACCT_CD,
+                                         SUM(DR_AMT) DR_AMT,
+                                         SUM(CR_AMT) CR_AMT,
+                                         CASE
+                                           WHEN DRCR_CD = '1' THEN SUM(DR_AMT) - SUM(CR_AMT)
+                                           ELSE SUM(CR_AMT) - SUM(DR_AMT)
+                                         END AMT_THIS
+                                        FROM CA_DOCU_MST
+                                        WHERE
+                                           SETTL_YM   = '201712'                AND
+                                           CONSGRP_CD = 'OTG'     AND
+                                           DOCU_ST    = '2'                     AND
+                                           WRT_TP     = '2'
+                                        GROUP BY
+                                           ACCT_CD, DRCR_CD
+                                        ) DOCU
+                                        WHERE
+                                          DOCU.ACCT_CD IN  (
+                                                             SELECT
+                                                               COACCT_CD
+                                                             FROM CA_CECOA_MST
+                                                             WHERE
+                                                               USE_YN = 'Y'     AND
+                                                               DATASRC_CD = '3'
+                                                            )
+                                 ) AMT ON CECOA.COACCT_CD  = AMT.ACCT_CD AND
+                                              CECOA.DATASRC_CD = '3'
+                      WHERE
+                         CECOA.USE_YN          = 'Y'  AND
+                         CECOA.DATASRC_CD = '3'   AND
+                         AMT.DR_AMT IS NOT NULL  AND
+                         AMT.CR_AMT IS NOT NULL
+                   ) HND
+                   GROUP BY
+                     HND.COL_NUM, HND.CEACCT_CD, HND.COACGRP_CD, HND.COL
+             )
+            SELECT
+              RES.COL_NUM, RES.CEACCT_CD, RES.CEACCT_NM,
+              (SELECT COALESCE(SUM(BOOK_AMT), 0) FROM T_CHG_AMT WHERE CEACCT_CD = RES.CEACCT_CD AND COL = '1') + RES.COL1 AS COL1,
+              (SELECT COALESCE(SUM(BOOK_AMT), 0) FROM T_CHG_AMT WHERE CEACCT_CD = RES.CEACCT_CD AND COL = '2') + RES.COL2 AS COL2,
+              (SELECT COALESCE(SUM(BOOK_AMT), 0) FROM T_CHG_AMT WHERE CEACCT_CD = RES.CEACCT_CD AND COL = '3') + RES.COL3 AS COL3,
+              (SELECT COALESCE(SUM(BOOK_AMT), 0) FROM T_CHG_AMT WHERE CEACCT_CD = RES.CEACCT_CD AND COL = '4') + RES.COL4 AS COL4,
+              (SELECT COALESCE(SUM(BOOK_AMT), 0) FROM T_CHG_AMT WHERE CEACCT_CD = RES.CEACCT_CD AND COL = '5') + RES.COL5 AS COL5,
+              (SELECT COALESCE(SUM(BOOK_AMT), 0) FROM T_CHG_AMT WHERE CEACCT_CD = RES.CEACCT_CD AND COL = '6') + RES.COL6 AS COL6,
+              (SELECT COALESCE(SUM(BOOK_AMT), 0) FROM T_CHG_AMT WHERE CEACCT_CD = RES.CEACCT_CD AND COL = '7') + RES.COL7 AS COL7,
+              (SELECT COALESCE(SUM(BOOK_AMT), 0) FROM T_CHG_AMT WHERE CEACCT_CD = RES.CEACCT_CD) +
+              RES.COL1 +  RES.COL2 + RES.COL3 + RES.COL4 + RES.COL5 + RES.COL6 + RES.COL7 AS AM_TOTAL
+            FROM
+           (
+             SELECT
+              DEF.COL_NUM, DEF.CEACCT_CD,
+              DEF.CEACCT_NM,
+              CASE
+                WHEN LENGTH(DEF.CEACCT_CD) != 1 THEN
+                   COALESCE((SELECT AMT_THIS FROM T_GET_CALC_BS WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '1'), 0) -
+                   COALESCE((SELECT AMT_PREV FROM T_GET_CALC_BS_PREV WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '1'), 0)  +
+                   COALESCE((SELECT AM_BK FROM T_GET_INV_CAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '1'), 0)   +
+                   COALESCE((SELECT AM_BK FROM T_GET_IHCH_HAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '1'), 0) +
+                   COALESCE((SELECT AMT_THIS FROM T_HAND_DOCU WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '1'), 0)
+                ELSE
+                      CASE
+                         WHEN DEF.COL_NUM = '1' AND CAST(DEF.CEACCT_CD AS CHAR) = '1' THEN COALESCE((SELECT AMT_PREV FROM T_GET_AMT WHERE COL = '1'), 0)
+                         WHEN DEF.COL_NUM = '3' AND CAST(DEF.CEACCT_CD AS CHAR) = '3' THEN COALESCE((SELECT ACG_AMT FROM GET_CAL_AMT WHERE COL = '1'), 0)
+                         WHEN DEF.COL_NUM = '6' AND CAST(DEF.CEACCT_CD AS CHAR) = '6' THEN COALESCE((SELECT AMT_THIS FROM T_GET_AMT WHERE COL = '1'), 0)
+                         ELSE
+                           COALESCE((SELECT AMT_THIS FROM T_GET_CALC_BS WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '1'), 0) -
+                           COALESCE((SELECT AMT_PREV FROM T_GET_CALC_BS_PREV WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '1'), 0)  +
+                           COALESCE((SELECT AM_BK FROM T_GET_INV_CAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '1'), 0)   +
+                           COALESCE((SELECT AM_BK FROM T_GET_IHCH_HAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '1'), 0) +
+                           COALESCE((SELECT AMT_THIS FROM T_HAND_DOCU WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '1'), 0)
+                       END
+                    END COL1,
+                    CASE
+                 WHEN LENGTH(DEF.CEACCT_CD) != 1 THEN
+                   COALESCE((SELECT AMT_THIS FROM T_GET_CALC_BS WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '2'), 0) -
+                   COALESCE((SELECT AMT_PREV FROM T_GET_CALC_BS_PREV WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '2'), 0)  +
+                   COALESCE((SELECT AM_BK FROM T_GET_INV_CAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '2'), 0)   +
+                   COALESCE((SELECT AM_BK FROM T_GET_IHCH_HAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '2'), 0) +
+                   COALESCE((SELECT AMT_THIS FROM T_HAND_DOCU WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '2'), 0)
+                ELSE
+                      CASE
+                         WHEN DEF.COL_NUM = '1' AND CAST(DEF.CEACCT_CD AS CHAR) = '1' THEN COALESCE((SELECT AMT_PREV FROM T_GET_AMT WHERE COL = '2'), 0)
+                         WHEN DEF.COL_NUM = '3' AND CAST(DEF.CEACCT_CD AS CHAR) = '3' THEN COALESCE((SELECT ACG_AMT FROM GET_CAL_AMT WHERE COL = '2'), 0)
+                         WHEN DEF.COL_NUM = '6' AND CAST(DEF.CEACCT_CD AS CHAR) = '6' THEN COALESCE((SELECT AMT_THIS FROM T_GET_AMT WHERE COL = '2'), 0)
+                         ELSE
+                           COALESCE((SELECT AMT_THIS FROM T_GET_CALC_BS WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '2'), 0) -
+                           COALESCE((SELECT AMT_PREV FROM T_GET_CALC_BS_PREV WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '2'), 0)  +
+                           COALESCE((SELECT AM_BK FROM T_GET_INV_CAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '2'), 0)   +
+                           COALESCE((SELECT AM_BK FROM T_GET_IHCH_HAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '2'), 0) +
+                           COALESCE((SELECT AMT_THIS FROM T_HAND_DOCU WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '2'), 0)
+                       END
+                    END COL2,
+                    CASE
+                 WHEN LENGTH(DEF.CEACCT_CD) != 1 THEN
+                   COALESCE((SELECT AMT_THIS FROM T_GET_CALC_BS WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '3'), 0) -
+                   COALESCE((SELECT AMT_PREV FROM T_GET_CALC_BS_PREV WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '3'), 0)  +
+                   COALESCE((SELECT AM_BK FROM T_GET_INV_CAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '3'), 0)   +
+                   COALESCE((SELECT AM_BK FROM T_GET_IHCH_HAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '3'), 0) +
+                   COALESCE((SELECT AMT_THIS FROM T_HAND_DOCU WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '3'), 0)
+                ELSE
+                      CASE
+                         WHEN DEF.COL_NUM = '1' AND CAST(DEF.CEACCT_CD AS CHAR) = '1' THEN COALESCE((SELECT AMT_PREV FROM T_GET_AMT WHERE COL = '3'), 0)
+                         WHEN DEF.COL_NUM = '3' AND CAST(DEF.CEACCT_CD AS CHAR) = '3' THEN COALESCE((SELECT ACG_AMT FROM GET_CAL_AMT WHERE COL = '3'), 0)
+                         WHEN DEF.COL_NUM = '6' AND CAST(DEF.CEACCT_CD AS CHAR) = '6' THEN COALESCE((SELECT AMT_THIS FROM T_GET_AMT WHERE COL = '3'), 0)
+                         ELSE
+                           COALESCE((SELECT AMT_THIS FROM T_GET_CALC_BS WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '3'), 0) -
+                           COALESCE((SELECT AMT_PREV FROM T_GET_CALC_BS_PREV WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '3'), 0)  +
+                           COALESCE((SELECT AM_BK FROM T_GET_INV_CAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '3'), 0)   +
+                           COALESCE((SELECT AM_BK FROM T_GET_IHCH_HAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '3'), 0) +
+                           COALESCE((SELECT AMT_THIS FROM T_HAND_DOCU WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '3'), 0)
+                       END
+                    END COL3,
+                    CASE
+                 WHEN LENGTH(DEF.CEACCT_CD) != 1 THEN
+                   COALESCE((SELECT AMT_THIS FROM T_GET_CALC_BS WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '4'), 0) -
+                   COALESCE((SELECT AMT_PREV FROM T_GET_CALC_BS_PREV WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '4'), 0)  +
+                   COALESCE((SELECT AM_BK FROM T_GET_INV_CAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '4'), 0)   +
+                   COALESCE((SELECT AM_BK FROM T_GET_IHCH_HAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '4'), 0) +
+                   COALESCE((SELECT AMT_THIS FROM T_HAND_DOCU WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '4'), 0)
+                ELSE
+                      CASE
+                         WHEN DEF.COL_NUM = '1' AND CAST(DEF.CEACCT_CD AS CHAR) = '1' THEN COALESCE((SELECT AMT_PREV FROM T_GET_AMT WHERE COL = '4'), 0)
+                         WHEN DEF.COL_NUM = '3' AND CAST(DEF.CEACCT_CD AS CHAR) = '3' THEN COALESCE((SELECT ACG_AMT FROM GET_CAL_AMT WHERE COL = '4'), 0)
+                         WHEN DEF.COL_NUM = '6' AND CAST(DEF.CEACCT_CD AS CHAR) = '6' THEN COALESCE((SELECT AMT_THIS FROM T_GET_AMT WHERE COL = '4'), 0)
+                         ELSE
+                           COALESCE((SELECT AMT_THIS FROM T_GET_CALC_BS WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '4'), 0) -
+                           COALESCE((SELECT AMT_PREV FROM T_GET_CALC_BS_PREV WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '4'), 0)  +
+                           COALESCE((SELECT AM_BK FROM T_GET_INV_CAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '4'), 0)   +
+                           COALESCE((SELECT AM_BK FROM T_GET_IHCH_HAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '4'), 0) +
+                           COALESCE((SELECT AMT_THIS FROM T_HAND_DOCU WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '4'), 0)
+                       END
+                    END COL4,
+                    CASE
+                 WHEN LENGTH(DEF.CEACCT_CD) != 1 THEN
+                   COALESCE((SELECT AMT_THIS FROM T_GET_CALC_BS WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '5'), 0) -
+                   COALESCE((SELECT AMT_PREV FROM T_GET_CALC_BS_PREV WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '5'), 0)  +
+                   COALESCE((SELECT AM_BK FROM T_GET_INV_CAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '5'), 0)   +
+                   COALESCE((SELECT AM_BK FROM T_GET_IHCH_HAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '5'), 0) +
+                   COALESCE((SELECT AMT_THIS FROM T_HAND_DOCU WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '5'), 0)
+                ELSE
+                      CASE
+                         WHEN DEF.COL_NUM = '1' AND CAST(DEF.CEACCT_CD AS CHAR) = '1' THEN COALESCE((SELECT AMT_PREV FROM T_GET_AMT WHERE COL = '5'), 0)
+                         WHEN DEF.COL_NUM = '3' AND CAST(DEF.CEACCT_CD AS CHAR) = '3' THEN COALESCE((SELECT ACG_AMT FROM GET_CAL_AMT WHERE COL = '5'), 0)
+                         WHEN DEF.COL_NUM = '6' AND CAST(DEF.CEACCT_CD AS CHAR) = '6' THEN COALESCE((SELECT AMT_THIS FROM T_GET_AMT WHERE COL = '5'), 0)
+                         ELSE
+                           COALESCE((SELECT AMT_THIS FROM T_GET_CALC_BS WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '5'), 0) -
+                           COALESCE((SELECT AMT_PREV FROM T_GET_CALC_BS_PREV WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '5'), 0)  +
+                           COALESCE((SELECT AM_BK FROM T_GET_INV_CAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '5'), 0)   +
+                           COALESCE((SELECT AM_BK FROM T_GET_IHCH_HAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '5'), 0) +
+                           COALESCE((SELECT AMT_THIS FROM T_HAND_DOCU WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '5'), 0)
+                       END
+                    END COL5,
+                   CASE
+                 WHEN LENGTH(DEF.CEACCT_CD) != 1 THEN
+                   COALESCE((SELECT AMT_THIS FROM T_GET_CALC_BS WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '6'), 0) -
+                   COALESCE((SELECT AMT_PREV FROM T_GET_CALC_BS_PREV WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '6'), 0)  +
+                   COALESCE((SELECT AM_BK FROM T_GET_INV_CAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '6'), 0)   +
+                   COALESCE((SELECT AM_BK FROM T_GET_IHCH_HAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '6'), 0) +
+                   COALESCE((SELECT AMT_THIS FROM T_HAND_DOCU WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '6'), 0)
+                ELSE
+                      CASE
+                         WHEN DEF.COL_NUM = '1' AND CAST(DEF.CEACCT_CD AS CHAR) = '1' THEN COALESCE((SELECT AMT_PREV FROM T_GET_AMT WHERE COL = '6'), 0)
+                         WHEN DEF.COL_NUM = '3' AND CAST(DEF.CEACCT_CD AS CHAR) = '3' THEN COALESCE((SELECT ACG_AMT FROM GET_CAL_AMT WHERE COL = '6'), 0)
+                         WHEN DEF.COL_NUM = '6' AND CAST(DEF.CEACCT_CD AS CHAR) = '6' THEN COALESCE((SELECT AMT_THIS FROM T_GET_AMT WHERE COL = '6'), 0)
+                         ELSE
+                           COALESCE((SELECT AMT_THIS FROM T_GET_CALC_BS WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '6'), 0) -
+                           COALESCE((SELECT AMT_PREV FROM T_GET_CALC_BS_PREV WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '6'), 0)  +
+                           COALESCE((SELECT AM_BK FROM T_GET_INV_CAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '6'), 0)   +
+                           COALESCE((SELECT AM_BK FROM T_GET_IHCH_HAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '6'), 0) +
+                           COALESCE((SELECT AMT_THIS FROM T_HAND_DOCU WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '6'), 0)
+                       END
+                    END COL6,
+                   CASE
+                 WHEN LENGTH(DEF.CEACCT_CD) != 1 THEN
+                   COALESCE((SELECT AMT_THIS FROM T_GET_CALC_BS WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '7'), 0) -
+                   COALESCE((SELECT AMT_PREV FROM T_GET_CALC_BS_PREV WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '7'), 0)  +
+                   COALESCE((SELECT AM_BK FROM T_GET_INV_CAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '7'), 0)   +
+                   COALESCE((SELECT AM_BK FROM T_GET_IHCH_HAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '7'), 0) +
+                   COALESCE((SELECT AMT_THIS FROM T_HAND_DOCU WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '7'), 0)
+                ELSE
+                      CASE
+                         WHEN DEF.COL_NUM = '1' AND CAST(DEF.CEACCT_CD AS CHAR) = '1' THEN COALESCE((SELECT AMT_PREV FROM T_GET_AMT WHERE COL = '7'), 0)
+                         WHEN DEF.COL_NUM = '3' AND CAST(DEF.CEACCT_CD AS CHAR) = '3' THEN COALESCE((SELECT ACG_AMT FROM GET_CAL_AMT WHERE COL = '7'), 0)
+                         WHEN DEF.COL_NUM = '6' AND CAST(DEF.CEACCT_CD AS CHAR) = '6' THEN COALESCE((SELECT AMT_THIS FROM T_GET_AMT WHERE COL = '7'), 0)
+                         ELSE
+                           COALESCE((SELECT AMT_THIS FROM T_GET_CALC_BS WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '7'), 0) -
+                           COALESCE((SELECT AMT_PREV FROM T_GET_CALC_BS_PREV WHERE  CEACCT_CD = DEF.CEACCT_CD AND COL = '7'), 0)  +
+                           COALESCE((SELECT AM_BK FROM T_GET_INV_CAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '7'), 0)   +
+                           COALESCE((SELECT AM_BK FROM T_GET_IHCH_HAP WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '7'), 0) +
+                           COALESCE((SELECT AMT_THIS FROM T_HAND_DOCU WHERE CEACCT_CD = DEF.CEACCT_CD AND COL = '7'), 0)
+                       END
+                    END COL7,
+               0 AM_TOTAL
+             FROM T_DEFAULT DEF
+            ) RES
+            ORDER BY
+                RES.COL_NUM, RES.CEACCT_CD;

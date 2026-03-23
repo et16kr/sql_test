@@ -18,7 +18,16 @@ from .case_builder import build_case_plans
 from .classifier import classify_compare, is_fatal_from_output, status_priority
 from .comparator import order_only_mismatch, strict_compare
 from .directive_parser import parse_sql_file
-from .executor import build_env, execute_is, run_shell_command, run_system_actions, write_text
+from .executor import (
+    build_env,
+    ensure_script_trailing_newline,
+    execute_is,
+    restore_rewritten_include_output,
+    rewrite_script_includes,
+    run_shell_command,
+    run_system_actions,
+    write_text,
+)
 from .healthcheck import is_port_open, resolve_port
 from .model import CasePlan, CaseResult, ParseIssue, RunOptions, RunResult
 from .recovery import recover_with_clean_and_start
@@ -233,11 +242,33 @@ def _run_phase(
     hidden_pre_path = str(Path(case_dir, f"{phase_name}.hidden.pre.sql"))
     phase_stdout_path = str(Path(case_dir, f"{phase_name}.stdout"))
     phase_stderr_path = str(Path(case_dir, f"{phase_name}.stderr"))
-    write_text(pre_path, parse_result.preprocessed_sql)
+    mirror_root = str(Path(case_dir, "script_mirror"))
+    include_cache: Dict[str, str] = {}
+    include_echo_map: Dict[str, str] = {}
+    rewritten_visible_sql = rewrite_script_includes(
+        parse_result.preprocessed_sql,
+        phase_sql,
+        mirror_root,
+        cache=include_cache,
+        echo_map=include_echo_map,
+    )
+    rewritten_hidden_sql = (
+        rewrite_script_includes(
+            parse_result.hidden_sql,
+            phase_sql,
+            mirror_root,
+            cache=include_cache,
+            echo_map=include_echo_map,
+        )
+        if parse_result.hidden_sql
+        else ""
+    )
+
+    write_text(pre_path, ensure_script_trailing_newline(rewritten_visible_sql))
     if phase_name == "test":
         phase_artifacts["preprocessed_sql"] = pre_path
     if parse_result.hidden_sql:
-        write_text(hidden_pre_path, parse_result.hidden_sql)
+        write_text(hidden_pre_path, ensure_script_trailing_newline(rewritten_hidden_sql))
         phase_artifacts["hidden_preprocessed_sql"] = hidden_pre_path
 
     ok, system_result = run_system_actions(parse_result.actions, base_env=ctx.base_env, timeout_sec=phase_timeout_sec)
@@ -261,7 +292,8 @@ def _run_phase(
         hidden_stderr_path = str(Path(case_dir, f"{phase_name}.hidden.stderr"))
         hidden_env = build_env(ctx.base_env, parse_result.hidden_env, parse_result.hidden_unset_env_keys)
         hidden_res = execute_is(hidden_pre_path, timeout_sec=phase_timeout_sec, env=hidden_env)
-        write_text(hidden_stdout_path, hidden_res.stdout)
+        hidden_stdout = restore_rewritten_include_output(hidden_res.stdout, include_echo_map)
+        write_text(hidden_stdout_path, hidden_stdout)
         write_text(hidden_stderr_path, hidden_res.stderr)
         phase_artifacts["hidden_stdout"] = hidden_stdout_path
         phase_artifacts["hidden_stderr"] = hidden_stderr_path
@@ -270,7 +302,7 @@ def _run_phase(
             return (
                 config.STATUS_FATAL,
                 config.REASON_SERVER_DISCONNECTED,
-                hidden_res.stdout,
+                hidden_stdout,
                 hidden_res.stderr,
                 hidden_res.returncode,
                 phase_artifacts,
@@ -281,7 +313,7 @@ def _run_phase(
             return (
                 config.STATUS_FATAL,
                 config.REASON_SERVER_PORT_CLOSED,
-                hidden_res.stdout,
+                hidden_stdout,
                 hidden_res.stderr,
                 hidden_res.returncode,
                 phase_artifacts,
@@ -292,7 +324,7 @@ def _run_phase(
             return (
                 config.STATUS_ERROR,
                 config.REASON_TIMEOUT,
-                hidden_res.stdout,
+                hidden_stdout,
                 hidden_res.stderr,
                 hidden_res.returncode,
                 phase_artifacts,
@@ -303,7 +335,7 @@ def _run_phase(
             return (
                 config.STATUS_ERROR,
                 config.REASON_EXEC_FAILED,
-                hidden_res.stdout,
+                hidden_stdout,
                 hidden_res.stderr,
                 hidden_res.returncode,
                 phase_artifacts,
@@ -316,30 +348,31 @@ def _run_phase(
 
     visible_env = build_env(ctx.base_env, parse_result.visible_env, parse_result.visible_unset_env_keys)
     res = execute_is(pre_path, timeout_sec=phase_timeout_sec, env=visible_env)
-    write_text(phase_stdout_path, res.stdout)
+    visible_stdout = restore_rewritten_include_output(res.stdout, include_echo_map)
+    write_text(phase_stdout_path, visible_stdout)
     write_text(phase_stderr_path, res.stderr)
 
     if phase_name == "test":
-        write_text(plan.out_path, res.stdout)
+        write_text(plan.out_path, visible_stdout)
         write_text(plan.err_path, res.stderr)
         stderr_case_path = str(Path(case_dir, "stderr.err"))
         write_text(stderr_case_path, res.stderr)
         phase_artifacts["stderr.err"] = stderr_case_path
 
     if is_fatal_from_output(res.stdout, res.stderr, config.FATAL_PATTERNS):
-        return config.STATUS_FATAL, config.REASON_SERVER_DISCONNECTED, res.stdout, res.stderr, res.returncode, phase_artifacts, True
+        return config.STATUS_FATAL, config.REASON_SERVER_DISCONNECTED, visible_stdout, res.stderr, res.returncode, phase_artifacts, True
 
     if not is_port_open("localhost", ctx.port):
-        return config.STATUS_FATAL, config.REASON_SERVER_PORT_CLOSED, res.stdout, res.stderr, res.returncode, phase_artifacts, True
+        return config.STATUS_FATAL, config.REASON_SERVER_PORT_CLOSED, visible_stdout, res.stderr, res.returncode, phase_artifacts, True
 
     if res.timed_out:
-        return config.STATUS_ERROR, config.REASON_TIMEOUT, res.stdout, res.stderr, res.returncode, phase_artifacts, True
+        return config.STATUS_ERROR, config.REASON_TIMEOUT, visible_stdout, res.stderr, res.returncode, phase_artifacts, True
     if res.error:
-        return config.STATUS_ERROR, config.REASON_EXEC_FAILED, res.stdout, res.stderr, res.returncode, phase_artifacts, True
+        return config.STATUS_ERROR, config.REASON_EXEC_FAILED, visible_stdout, res.stderr, res.returncode, phase_artifacts, True
     if res.returncode != 0:
-        return config.STATUS_ERROR, config.REASON_EXEC_FAILED, res.stdout, res.stderr, res.returncode, phase_artifacts, True
+        return config.STATUS_ERROR, config.REASON_EXEC_FAILED, visible_stdout, res.stderr, res.returncode, phase_artifacts, True
 
-    return config.STATUS_PASS, "", res.stdout, res.stderr, res.returncode, phase_artifacts, True
+    return config.STATUS_PASS, "", visible_stdout, res.stderr, res.returncode, phase_artifacts, True
 
 
 
