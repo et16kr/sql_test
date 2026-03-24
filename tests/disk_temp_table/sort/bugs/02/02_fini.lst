@@ -37,3 +37,7 @@ iSQL> DROP TABLE CM_LANGDIC_MST;
 Drop success.
 iSQL> DROP TABLE CA_CECOA_INFO;
 Drop success.
+iSQL> alter system set PREPARE_STMT_MEMORY_MAXIMUM = 209715200;
+Alter success.
+iSQL> alter system set TOTAL_WA_SIZE = 134217728;
+Alter success.
