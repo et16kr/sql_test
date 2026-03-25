@@ -1,0 +1,88 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Port altidev4/test/bug2.sql as a stable set-operation regression.
+iSQL> -- Checks: INTERSECT and MINUS handle VARCHAR/CHAR combinations and NULL values correctly.
+iSQL> -- Source: altidev4/test/bug2.sql
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> CREATE TABLE DST_BUG2_T1
+(
+    I1 VARCHAR(3) VARIABLE,
+    I2 VARCHAR(3) FIXED
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> CREATE TABLE DST_BUG2_T2
+(
+    I1 VARCHAR(3) VARIABLE,
+    I2 CHAR(3)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> INSERT INTO DST_BUG2_T1 VALUES (1, 1);
+1 row inserted.
+iSQL> INSERT INTO DST_BUG2_T1 VALUES (2, 2);
+1 row inserted.
+iSQL> INSERT INTO DST_BUG2_T1 VALUES (0, 3);
+1 row inserted.
+iSQL> INSERT INTO DST_BUG2_T1 VALUES (2, 4);
+1 row inserted.
+iSQL> INSERT INTO DST_BUG2_T1 VALUES (3, 1);
+1 row inserted.
+iSQL> INSERT INTO DST_BUG2_T1 VALUES (3, 1);
+1 row inserted.
+iSQL> INSERT INTO DST_BUG2_T1 VALUES (4, 2);
+1 row inserted.
+iSQL> INSERT INTO DST_BUG2_T1 VALUES (2, NULL);
+1 row inserted.
+iSQL> INSERT INTO DST_BUG2_T2 VALUES (1, 1);
+1 row inserted.
+iSQL> INSERT INTO DST_BUG2_T2 VALUES (2, 2);
+1 row inserted.
+iSQL> INSERT INTO DST_BUG2_T2 VALUES (1, NULL);
+1 row inserted.
+iSQL> INSERT INTO DST_BUG2_T2 VALUES (2, 4);
+1 row inserted.
+iSQL> INSERT INTO DST_BUG2_T2 VALUES (3, 2);
+1 row inserted.
+iSQL> INSERT INTO DST_BUG2_T2 VALUES (4, 8);
+1 row inserted.
+iSQL> INSERT INTO DST_BUG2_T2 VALUES (2, 2);
+1 row inserted.
+iSQL> INSERT INTO DST_BUG2_T2 VALUES (5, 4);
+1 row inserted.
+iSQL> SELECT /*+ TEMP_TBS_DISK */ I1, I2
+  FROM (
+        SELECT I1, I2 FROM DST_BUG2_T1
+        INTERSECT
+        SELECT I1, I2 FROM DST_BUG2_T2
+       ) X
+ ORDER BY I1, I2;
+I1   I2   
+-------------
+No rows selected.
+iSQL> SELECT /*+ TEMP_TBS_DISK */ I1, I2
+  FROM (
+        SELECT I1, I2 FROM DST_BUG2_T1
+        MINUS
+        SELECT I1, I2 FROM DST_BUG2_T2
+       ) X
+ ORDER BY I1, I2;
+I1   I2   
+-------------
+0    3    
+1    1    
+2    2    
+2    4    
+2         
+3    1    
+4    2    
+7 rows selected.
+iSQL> DROP TABLE DST_BUG2_T1;
+Drop success.
+iSQL> DROP TABLE DST_BUG2_T2;
+Drop success.
