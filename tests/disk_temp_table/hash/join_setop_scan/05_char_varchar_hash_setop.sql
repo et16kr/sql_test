@@ -1,5 +1,5 @@
--- Test Purpose: Port altidev4/test/bug2.sql as a stable set-operation regression.
--- Checks: INTERSECT and MINUS handle VARCHAR/CHAR combinations and NULL values correctly.
+-- Test Purpose: Reclassify altidev4/test/bug2.sql as a stable hash set-operation regression.
+-- Checks: INTERSECT and MINUS handle VARCHAR/CHAR combinations and NULL values correctly on the disk-temp hash path.
 -- Source: altidev4/test/bug2.sql
 -- Manual reference:
 --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md

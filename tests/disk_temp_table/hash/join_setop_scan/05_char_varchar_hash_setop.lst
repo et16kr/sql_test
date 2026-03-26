@@ -5,8 +5,8 @@
      All Rights Reserved.
 -----------------------------------------------------------------
 ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
-iSQL> -- Test Purpose: Port altidev4/test/bug2.sql as a stable set-operation regression.
-iSQL> -- Checks: INTERSECT and MINUS handle VARCHAR/CHAR combinations and NULL values correctly.
+iSQL> -- Test Purpose: Reclassify altidev4/test/bug2.sql as a stable hash set-operation regression.
+iSQL> -- Checks: INTERSECT and MINUS handle VARCHAR/CHAR combinations and NULL values correctly on the disk-temp hash path.
 iSQL> -- Source: altidev4/test/bug2.sql
 iSQL> -- Manual reference:
 iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md

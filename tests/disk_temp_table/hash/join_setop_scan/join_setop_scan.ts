@@ -2,3 +2,5 @@
 02_packed_full_outer_hitnohit.sql
 03_packed_intersect_nonhit.sql
 04_packed_hash_subquery_grid.sql
+05_char_varchar_hash_setop.sql
+06_char_varchar_hash_setop_legacy_multipiece.sql
