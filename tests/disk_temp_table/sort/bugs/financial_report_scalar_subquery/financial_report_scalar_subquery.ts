@@ -1,0 +1,3 @@
+financial_report_scalar_subquery_init.sql
+financial_report_scalar_subquery_test.sql
+financial_report_scalar_subquery_fini.sql

@@ -29,12 +29,12 @@ insert into t2 values (7, 4, 3, 3, 3);
 insert into t2 values (8, 8, 9, 9, 9);
 
 ALTER SYSTEM SET INIT_TOTAL_WA_SIZE = 0;
-alter system set __TEMP_SORT_ROW_PACKING_DISABLE = 1;
+alter system set __TEMP_SORT_ROW_PACKING = 0;
 
 select /*+ USE_SORT(t2, t1) */ (t1.a+0), (t1.b+0), (t1.c+0), (t1.d+0), (t1.e+0), (t2.c+0), (t2.d+0), (t2.e+0)
 from t1, t2 where t1.a = t2.a and t1.b = t2.b;
 
-alter system set __TEMP_SORT_ROW_PACKING_DISABLE = 0;
+alter system set __TEMP_SORT_ROW_PACKING = 1;
 
 select /*+ USE_SORT(t2, t1) */ (t1.a+0), (t1.b+0), (t1.c+0), (t1.d+0), (t1.e+0), (t2.c+0), (t2.d+0), (t2.e+0)
 from t1, t2 where t1.a = t2.a and t1.b = t2.b;
