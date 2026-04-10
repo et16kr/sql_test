@@ -17,3 +17,4 @@
 17_memory_table_disk_temp_property.sql
 18_memory_table_disk_temp_property_char_varchar_mix.sql
 19_memory_table_disk_temp_property_alltype_mix.sql
+20_temp_row_mode2_compact_payload_smoke.sql

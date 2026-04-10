@@ -1,2 +1,1 @@
-bug.sql
 financial_report_scalar_subquery/financial_report_scalar_subquery.ts

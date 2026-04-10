@@ -1,0 +1,94 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.3.0.0.0
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 20101
+iSQL> -- Test Purpose: Validate small mode2 compact-payload temp-row behavior on ROW_NUMBER insert-select.
+iSQL> -- Checks:
+iSQL> --   1) __TEMP_SORT_ROW_PACKING = 1 is applied explicitly for deterministic mode2 coverage.
+iSQL> --   2) ROW_NUMBER-based insert-select keeps all 100 source rows.
+iSQL> --   3) x$tablespaces id 4/5 page ratio stays within the expected compact-payload bound.
+iSQL> -- Manual reference:
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
+iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
+iSQL> --+SET_ENV ALTIBASE_SYS_TEMP_FILE_INIT_SIZE=1048510;
+iSQL> --+SYSTEM clean;
+iSQL> --+SYSTEM server start;
+iSQL> connect SYS/MANAGER;
+Connect success.
+iSQL> CREATE TABLESPACE TBS1 DATAFILE 'tbs1.dbf' SIZE 1M AUTOEXTEND ON MAXSIZE 1G;
+Create success.
+iSQL> CREATE TABLE T0
+(
+    I0  VARCHAR(5),
+    I1  VARCHAR(33),
+    I3  VARCHAR(6),
+    I4  VARCHAR(6),
+    D1  VARCHAR(3200),
+    D2  VARCHAR(3200),
+    D3  VARCHAR(3200)
+) TABLESPACE SYS_TBS_DISK_DATA;
+Create success.
+iSQL> CREATE TABLE T1
+(
+    I0  VARCHAR(5),
+    I1  VARCHAR(33),
+    D1  VARCHAR(3200),
+    D2  VARCHAR(3200),
+    D3  VARCHAR(3200)
+) TABLESPACE TBS1;
+Create success.
+iSQL> INSERT INTO T0
+SELECT CHR(65 + MOD(LEVEL, 26)),
+       TO_CHAR(LEVEL),
+       CHR(65 + MOD(LEVEL, 26)),
+       CHR(65 + MOD(LEVEL, 26)),
+       CHR(65 + MOD(LEVEL, 26)),
+       CHR(65 + MOD(LEVEL, 26)),
+       CHR(65 + MOD(LEVEL, 26))
+  FROM DUAL
+CONNECT BY LEVEL <= 100;
+100 rows inserted.
+iSQL> ALTER SYSTEM SET __TEMP_SORT_ROW_PACKING = 1;
+Alter success.
+iSQL> INSERT INTO T1
+SELECT I0,
+       I1,
+       D1,
+       D2,
+       D3
+  FROM (
+        SELECT TB1.*,
+               ROW_NUMBER() OVER (
+                   PARTITION BY I0, I1
+                   ORDER BY ROWNUM, I4 DESC, I3 DESC
+               ) AS SEQNO
+          FROM T0 TB1
+       )
+ WHERE SEQNO = 1;
+100 rows inserted.
+iSQL> SELECT CASE WHEN COUNT(*) = 100 THEN 1 ELSE 0 END AS PASS_COUNT
+  FROM T1;
+PASS_COUNT  
+--------------
+1           
+1 row selected.
+iSQL> SELECT CASE WHEN T.P4 < (T.P5 * 2) THEN 1 ELSE 0 END AS IS_GT
+  FROM (
+        SELECT MAX(CASE WHEN ID = 4 THEN TOTAL_PAGE_COUNT END) AS P4,
+               MAX(CASE WHEN ID = 5 THEN TOTAL_PAGE_COUNT END) AS P5
+          FROM X$TABLESPACES
+         WHERE ID IN (4, 5)
+       ) T;
+IS_GT       
+--------------
+1           
+1 row selected.
+iSQL> DROP TABLE T0;
+Drop success.
+iSQL> DROP TABLE T1;
+Drop success.
+iSQL> DROP TABLESPACE TBS1 INCLUDING CONTENTS AND DATAFILES;
+Drop success.
