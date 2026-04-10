@@ -1,10 +1,10 @@
 -----------------------------------------------------------------
      Altibase Client Query utility.
-     Release Version 7.1.0.2.4
+     Release Version 7.3.0.0.0
      Copyright 2000, ALTIBASE Corporation or its subsidiaries.
      All Rights Reserved.
 -----------------------------------------------------------------
-ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 20101
 iSQL> -- Test Purpose: Reproduce mode2 packed-row sort-join regression fixed by sdtSortModule callback row conversion.
 iSQL> -- Checks: USE_SORT join result must match baseline in both mode1 and mode2.
 iSQL> -- Manual reference:

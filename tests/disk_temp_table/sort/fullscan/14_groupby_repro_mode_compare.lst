@@ -164,7 +164,5 @@ COUNT(*)
 -----------------------
 7                    
 1 row selected.
-iSQL> alter system set __TEMP_SORT_ROW_PACKING = 0;
-Alter success.
 iSQL> drop table gb_repro;
 Drop success.

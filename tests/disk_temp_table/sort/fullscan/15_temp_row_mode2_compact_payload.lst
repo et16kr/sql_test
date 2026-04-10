@@ -358,7 +358,7 @@ iSQL> INSERT INTO T1
     )
     WHERE SEQNO =1;
 100000 rows inserted.
-elapsed time : 10.23
+elapsed time : 18.01
 iSQL> set timing off;
 iSQL>     select
         case when t.temp_pages < (t.data_pages * 2) then 1 else 0 end as is_gt

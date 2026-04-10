@@ -1,10 +1,10 @@
 -----------------------------------------------------------------
      Altibase Client Query utility.
-     Release Version 7.1.0.2.4
+     Release Version 7.3.0.0.0
      Copyright 2000, ALTIBASE Corporation or its subsidiaries.
      All Rights Reserved.
 -----------------------------------------------------------------
-ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 20101
 iSQL> create table t1 (a char(1000), b char(1000), c char(10000), d char(10000), e char(10000)) tablespace sys_tbs_disk_data;
 Create success.
 iSQL> create table t2 (a char(1000), b char(1000), c char(10000), d char(10000), e char(10000)) tablespace sys_tbs_disk_data;

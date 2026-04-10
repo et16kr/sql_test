@@ -1,4 +1,2 @@
 bug.sql
-packed_window_update_chained_fatal.sql
-packed_hotfirst_chained_split_update_fatal.sql
 financial_report_scalar_subquery/financial_report_scalar_subquery.ts
