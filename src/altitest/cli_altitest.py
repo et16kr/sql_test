@@ -271,7 +271,10 @@ def _run_phase(
         write_text(hidden_pre_path, ensure_script_trailing_newline(rewritten_hidden_sql))
         phase_artifacts["hidden_preprocessed_sql"] = hidden_pre_path
 
-    ok, system_result = run_system_actions(parse_result.actions, base_env=ctx.base_env, timeout_sec=phase_timeout_sec)
+    pre_actions = [action for action in parse_result.actions if action.lineno <= parse_result.last_sql_lineno]
+    post_actions = [action for action in parse_result.actions if action.lineno > parse_result.last_sql_lineno]
+
+    ok, system_result = run_system_actions(pre_actions, base_env=ctx.base_env, timeout_sec=phase_timeout_sec)
     if not ok:
         if system_result.timed_out:
             return config.STATUS_ERROR, config.REASON_TIMEOUT, system_result.stdout, system_result.stderr, system_result.returncode, phase_artifacts, False
@@ -371,6 +374,25 @@ def _run_phase(
         return config.STATUS_ERROR, config.REASON_EXEC_FAILED, visible_stdout, res.stderr, res.returncode, phase_artifacts, True
     if res.returncode != 0:
         return config.STATUS_ERROR, config.REASON_EXEC_FAILED, visible_stdout, res.stderr, res.returncode, phase_artifacts, True
+
+    ok, system_result = run_system_actions(post_actions, base_env=ctx.base_env, timeout_sec=phase_timeout_sec)
+    if not ok:
+        if system_result.timed_out:
+            return config.STATUS_ERROR, config.REASON_TIMEOUT, visible_stdout, system_result.stderr, system_result.returncode, phase_artifacts, True
+        if is_fatal_from_output(system_result.stdout, system_result.stderr, config.FATAL_PATTERNS):
+            return (
+                config.STATUS_FATAL,
+                config.REASON_SERVER_DISCONNECTED,
+                visible_stdout,
+                system_result.stderr,
+                system_result.returncode,
+                phase_artifacts,
+                True,
+            )
+        return config.STATUS_ERROR, config.REASON_EXEC_FAILED, visible_stdout, system_result.stderr, system_result.returncode, phase_artifacts, True
+
+    if post_actions and not is_port_open("localhost", ctx.port):
+        return config.STATUS_FATAL, config.REASON_SERVER_PORT_CLOSED, visible_stdout, "", 1, phase_artifacts, True
 
     return config.STATUS_PASS, "", visible_stdout, res.stderr, res.returncode, phase_artifacts, True
 

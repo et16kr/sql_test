@@ -112,3 +112,10 @@ select count(*) from
 (select i_manufact_id, i_item_id, i_item_desc, i_current_price
   from gb_repro
  group by i_item_id, i_item_desc, i_current_price, i_manufact_id);
+
+alter system set __TEMP_SORT_ROW_PACKING = 0;
+drop table gb_repro;
+
+--+SET_ENV ALTIBASE_SYS_TEMP_FILE_INIT_SIZE=104857600;
+--+SYSTEM clean;
+--+SYSTEM server start;

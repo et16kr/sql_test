@@ -1,10 +1,10 @@
 -----------------------------------------------------------------
      Altibase Client Query utility.
-     Release Version 7.1.0.2.4
+     Release Version 7.3.0.0.0
      Copyright 2000, ALTIBASE Corporation or its subsidiaries.
      All Rights Reserved.
 -----------------------------------------------------------------
-ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 20101
 iSQL> -- Repro script for TEMP_SORT_ROW_PACKED_DISABLE group-by mismatch on disk tablespace.
 iSQL> -- Manual reference:
 iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
@@ -164,3 +164,7 @@ COUNT(*)
 -----------------------
 7                    
 1 row selected.
+iSQL> alter system set __TEMP_SORT_ROW_PACKING = 0;
+Alter success.
+iSQL> drop table gb_repro;
+Drop success.

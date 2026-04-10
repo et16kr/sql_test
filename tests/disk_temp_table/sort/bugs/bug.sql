@@ -42,3 +42,4 @@ from t1, t2 where t1.a = t2.a and t1.b = t2.b;
 drop table t1;
 drop table t2;
 ALTER SYSTEM SET INIT_TOTAL_WA_SIZE = 134217728;
+ALTER SYSTEM SET __TEMP_SORT_ROW_PACKING = 0;

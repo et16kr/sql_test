@@ -1,10 +1,10 @@
 -----------------------------------------------------------------
      Altibase Client Query utility.
-     Release Version 7.1.0.2.4
+     Release Version 7.3.0.0.0
      Copyright 2000, ALTIBASE Corporation or its subsidiaries.
      All Rights Reserved.
 -----------------------------------------------------------------
-ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 20101
 iSQL>     --+SET_ENV ALTIBASE_SYS_TEMP_FILE_INIT_SIZE=1048576;
 iSQL>     --+SYSTEM clean;
 iSQL>     --+SYSTEM server start;
@@ -358,7 +358,7 @@ iSQL> INSERT INTO T1
     )
     WHERE SEQNO =1;
 100000 rows inserted.
-elapsed time : 1.09
+elapsed time : 10.23
 iSQL> set timing off;
 iSQL>     select
         case when t.temp_pages < (t.data_pages * 2) then 1 else 0 end as is_gt
@@ -378,7 +378,7 @@ iSQL>     select name, total_page_count
      order by name;
 NAME                                      TOTAL_PAGE_COUNT     
 ------------------------------------------------------------------
-DST_COV_FS15_UTMP                         3712                 
+DST_COV_FS15_UTMP                         5632                 
 TBS1                                      6784                 
 2 rows selected.
 iSQL>     DROP TABLE T0;

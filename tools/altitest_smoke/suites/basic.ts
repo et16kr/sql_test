@@ -2,6 +2,7 @@
 ../sql/setenv.sql
 ../sql/setenv_is.sql
 ../sql/env_reset.sql
+../sql/system_after.sql
 ../sql/skip.sql
 ../sql/skip_exec.sql
 ../sql/skip_error_ok.sql

@@ -50,7 +50,7 @@ reset_basic_fixtures
 run_expect 1 ./bin/altitest tools/altitest_smoke/suites/basic.ts --continue-on-error --non-interactive --ai-report
 assert_json "
 summary = obj['summary']
-assert summary['pass'] == 8, summary
+assert summary['pass'] == 9, summary
 assert summary['order'] == 1, summary
 assert summary['fail'] == 2, summary
 assert summary['error'] == 1, summary

@@ -14,6 +14,7 @@ from .model import ParseIssue
 class DirectiveAction:
     kind: str
     command: str
+    lineno: int = 0
     env: Dict[str, str] = field(default_factory=dict)
     unset_env_keys: Set[str] = field(default_factory=set)
 
@@ -25,6 +26,7 @@ class ParseResult:
     actions: List[DirectiveAction]
     timeout_sec_override: Optional[int]
     issues: List[ParseIssue]
+    last_sql_lineno: int = 0
     segments: List["SqlSegment"] = field(default_factory=list)
     visible_env: Dict[str, str] = field(default_factory=dict)
     visible_unset_env_keys: Set[str] = field(default_factory=set)
@@ -74,6 +76,7 @@ def parse_sql_file(sql_path: str) -> ParseResult:
     visible_unset_env_keys: Optional[Set[str]] = None
     hidden_env: Optional[Dict[str, str]] = None
     hidden_unset_env_keys: Optional[Set[str]] = None
+    last_sql_lineno = 0
 
     path = str(Path(sql_path).resolve())
     try:
@@ -85,6 +88,7 @@ def parse_sql_file(sql_path: str) -> ParseResult:
             hidden_sql="",
             actions=[],
             timeout_sec_override=None,
+            last_sql_lineno=0,
             segments=[],
             issues=[ParseIssue(path=path, reason=REASON_PARSE_ERROR, detail=f"failed to read sql: {e}")],
             visible_env={},
@@ -110,6 +114,7 @@ def parse_sql_file(sql_path: str) -> ParseResult:
                     DirectiveAction(
                         kind="SYSTEM",
                         command=command,
+                        lineno=lineno,
                         env=dict(env_map),
                         unset_env_keys=set(unset_env_keys),
                     )
@@ -181,6 +186,8 @@ def parse_sql_file(sql_path: str) -> ParseResult:
             if visible_env is None and raw.strip() and not raw.lstrip().startswith("--"):
                 visible_env = dict(env_map)
                 visible_unset_env_keys = set(unset_env_keys)
+        if raw.strip() and not raw.lstrip().startswith("--"):
+            last_sql_lineno = lineno
         current_lines.append(raw)
 
     if in_skip:
@@ -193,6 +200,7 @@ def parse_sql_file(sql_path: str) -> ParseResult:
         hidden_sql="".join(hidden_lines),
         actions=actions,
         timeout_sec_override=timeout_sec_override,
+        last_sql_lineno=last_sql_lineno,
         segments=segments,
         issues=issues,
         visible_env=visible_env or {},

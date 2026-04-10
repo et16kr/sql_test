@@ -76,6 +76,7 @@ SQL 파일에서 줄 시작이 `--+` 인 라인은 러너가 먼저 해석하는
 
 - 디렉티브는 반드시 줄 시작이 `--+` 이어야 합니다.
 - `SYSTEM`/`SET_ENV`/`UNSET_ENV` 는 반드시 `;` 로 끝나야 합니다.
+- 마지막 SQL 뒤에만 남은 `SYSTEM` 디렉티브는 SQL 실행 후 post-action 으로 처리됩니다.
 - `TIMEOUT_SEC` 는 초 단위 정수(`> 0`)여야 하며 `;` 로 끝나야 합니다.
 - `SKIP` 문법은 `SKIP BEGIN;` / `SKIP END;` 만 허용됩니다.
 - `SKIP_BEGIN;`, `SKIP_END;` 같은 형태는 지원하지 않습니다.
