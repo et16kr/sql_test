@@ -1,6 +1,6 @@
-    --+SET_ENV ALTIBASE_SYS_TEMP_FILE_INIT_SIZE=1048576;
-    --+SYSTEM clean;
-    --+SYSTEM server start;
+--+SET_ENV ALTIBASE_SYS_TEMP_FILE_INIT_SIZE=1048576;
+--+SYSTEM clean;
+--+SYSTEM server start;
     connect SYS/MANAGER;
 
     create tablespace TBS1 datafile 'tbs1.dbf' size 1M autoextend on maxsize 1G;
@@ -362,9 +362,6 @@ set timing off;
      where name in ('DST_COV_FS15_UTMP', 'TBS1')
      order by name;
 
-    DROP TABLE T0;
-    DROP TABLE T1;
-    connect SYS/MANAGER;
-    DROP USER DST_COV_FS15_U CASCADE;
-    DROP TABLESPACE DST_COV_FS15_UTMP INCLUDING CONTENTS AND DATAFILES;
-    DROP TABLESPACE TBS1 INCLUDING CONTENTS AND DATAFILES;
+--+SET_ENV ALTIBASE_SYS_TEMP_FILE_INIT_SIZE=104857600;
+--+SYSTEM clean;
+--+SYSTEM server start;

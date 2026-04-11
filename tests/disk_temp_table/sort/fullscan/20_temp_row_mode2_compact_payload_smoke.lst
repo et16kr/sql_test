@@ -13,9 +13,6 @@ iSQL> --   3) x$tablespaces id 4/5 page ratio stays within the expected compact-
 iSQL> -- Manual reference:
 iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/iSQL User's Manual.md
 iSQL> --   docs/manuals/altibase/Altibase_7.1/eng/Performance Tuning Guide.md
-iSQL> --+SET_ENV ALTIBASE_SYS_TEMP_FILE_INIT_SIZE=1048510;
-iSQL> --+SYSTEM clean;
-iSQL> --+SYSTEM server start;
 iSQL> connect SYS/MANAGER;
 Connect success.
 iSQL> CREATE TABLESPACE TBS1 DATAFILE 'tbs1.dbf' SIZE 1M AUTOEXTEND ON MAXSIZE 1G;
@@ -86,9 +83,3 @@ IS_GT
 --------------
 1           
 1 row selected.
-iSQL> DROP TABLE T0;
-Drop success.
-iSQL> DROP TABLE T1;
-Drop success.
-iSQL> DROP TABLESPACE TBS1 INCLUDING CONTENTS AND DATAFILES;
-Drop success.

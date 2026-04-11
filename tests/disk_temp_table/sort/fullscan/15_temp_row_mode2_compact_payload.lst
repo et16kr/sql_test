@@ -5,9 +5,6 @@
      All Rights Reserved.
 -----------------------------------------------------------------
 ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 20101
-iSQL>     --+SET_ENV ALTIBASE_SYS_TEMP_FILE_INIT_SIZE=1048576;
-iSQL>     --+SYSTEM clean;
-iSQL>     --+SYSTEM server start;
 iSQL>     connect SYS/MANAGER;
 Connect success.
 iSQL>     create tablespace TBS1 datafile 'tbs1.dbf' size 1M autoextend on maxsize 1G;
@@ -358,7 +355,7 @@ iSQL> INSERT INTO T1
     )
     WHERE SEQNO =1;
 100000 rows inserted.
-elapsed time : 18.01
+elapsed time : 17.17
 iSQL> set timing off;
 iSQL>     select
         case when t.temp_pages < (t.data_pages * 2) then 1 else 0 end as is_gt
@@ -381,15 +378,3 @@ NAME                                      TOTAL_PAGE_COUNT
 DST_COV_FS15_UTMP                         5632                 
 TBS1                                      6784                 
 2 rows selected.
-iSQL>     DROP TABLE T0;
-Drop success.
-iSQL>     DROP TABLE T1;
-Drop success.
-iSQL>     connect SYS/MANAGER;
-Connect success.
-iSQL>     DROP USER DST_COV_FS15_U CASCADE;
-Drop success.
-iSQL>     DROP TABLESPACE DST_COV_FS15_UTMP INCLUDING CONTENTS AND DATAFILES;
-Drop success.
-iSQL>     DROP TABLESPACE TBS1 INCLUDING CONTENTS AND DATAFILES;
-Drop success.
