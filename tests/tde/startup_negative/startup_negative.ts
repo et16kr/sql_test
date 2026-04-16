@@ -1,0 +1,10 @@
+./invalid_wrap_key.sql | timeout_sec=900
+./invalid_keystore.sql | timeout_sec=900
+./invalid_keystore_version.sql | timeout_sec=900
+./invalid_keystore_missing_active.sql | timeout_sec=900
+./missing_master_key.sql | timeout_sec=900
+./corrupted_wrapped_tbs_key.sql | timeout_sec=900
+./corrupted_header_master_key_id.sql | timeout_sec=900
+./autoload_off_fail.sql | timeout_sec=900
+./plain_only_autoload_off_ok.sql | timeout_sec=900
+./all_decrypted_autoload_off_ok.sql | timeout_sec=900

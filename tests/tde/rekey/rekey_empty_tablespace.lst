@@ -1,0 +1,16 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Rekey an empty encrypted MRDB tablespace.
+iSQL> -- Checks: The empty tablespace moves to the active key.
+iSQL> -- Manual reference:
+iSQL> --   doc/altibase-docs/Manuals/Altibase_trunk/eng/iSQL User's Manual.md
+iSQL> SELECT CASE WHEN COUNT(*) = 1 THEN 1 ELSE 0 END AS PASS_EMPTY_REKEYED FROM V$TDE_TABLESPACES WHERE NAME = 'TDE_TMP_EMPTY_PLAIN_TBS' AND IS_ENCRYPTED = 1 AND MASTER_KEY_ID = (SELECT KEY_ID FROM V$TDE_MASTER_KEYS WHERE IS_ACTIVE = 1);
+PASS_EMPTY_REKEYED
+-------------------
+1
+1 row selected.

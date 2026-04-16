@@ -2,228 +2,92 @@
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 . "${SCRIPT_DIR}/tde_common.sh"
-
-tde_case_guard()
-{
-    tde_require_env
-    tde_require_safe_paths
-    tde_require_server_up
-}
-
-tde_bootstrap_init()
-{
-    tde_case_guard
-    tde_run_best_effort_cleanup
-    tde_replace_property TDE_AUTO_LOAD 1
-    tde_server_stop_expect_success
-    tde_remove_tde_artifacts
-    tde_server_start_expect_success
-}
-
-tde_restart_smoke()
-{
-    tde_case_guard
-    tde_server_restart_expect_success
-}
-
-tde_negative_wrap_key()
-{
-    BACKUP_PATH=$(mktemp)
-    RESTORED=0
-
-    cleanup()
-    {
-        if [ "${RESTORED}" -eq 0 ]
-        then
-            tde_restore_file "${BACKUP_PATH}" "${TDE_WRAP_KEY_PATH}"
-            if ! tde_probe_server
-            then
-                tde_server_start_expect_success >/dev/null 2>&1 || true
-            fi
-        fi
-
-        rm -f "${BACKUP_PATH}"
-    }
-
-    tde_case_guard
-
-    [ -f "${TDE_WRAP_KEY_PATH}" ] ||
-        tde_fail "wrap key file not found: ${TDE_WRAP_KEY_PATH}"
-
-    cp "${TDE_WRAP_KEY_PATH}" "${BACKUP_PATH}" ||
-        tde_fail "failed to backup wrap key file."
-
-    trap cleanup EXIT HUP INT TERM
-
-    tde_server_stop_expect_success
-
-    cat > "${TDE_WRAP_KEY_PATH}" <<'EOF'
-00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff
-EOF
-
-    tde_server_start_expect_failure "smERR_ABORT_TDEUnwrapFailure"
-    tde_restore_file "${BACKUP_PATH}" "${TDE_WRAP_KEY_PATH}"
-    RESTORED=1
-    tde_server_start_expect_success
-
-    trap - EXIT HUP INT TERM
-    rm -f "${BACKUP_PATH}"
-}
-
-tde_negative_invalid_keystore()
-{
-    BACKUP_PATH=$(mktemp)
-    RESTORED=0
-
-    cleanup()
-    {
-        if [ "${RESTORED}" -eq 0 ]
-        then
-            tde_restore_file "${BACKUP_PATH}" "${TDE_KEYSTORE_PATH}"
-            if ! tde_probe_server
-            then
-                tde_server_start_expect_success >/dev/null 2>&1 || true
-            fi
-        fi
-
-        rm -f "${BACKUP_PATH}"
-    }
-
-    tde_case_guard
-
-    [ -f "${TDE_KEYSTORE_PATH}" ] ||
-        tde_fail "keystore file not found: ${TDE_KEYSTORE_PATH}"
-
-    cp "${TDE_KEYSTORE_PATH}" "${BACKUP_PATH}" ||
-        tde_fail "failed to backup keystore file."
-
-    trap cleanup EXIT HUP INT TERM
-
-    tde_server_stop_expect_success
-
-    grep -v '^WRAP_KEY_CHECK=' "${BACKUP_PATH}" > "${TDE_KEYSTORE_PATH}" ||
-        tde_fail "failed to damage keystore file."
-
-    tde_server_start_expect_failure "smERR_ABORT_TDEInvalidKeyStore"
-    tde_restore_file "${BACKUP_PATH}" "${TDE_KEYSTORE_PATH}"
-    RESTORED=1
-    tde_server_start_expect_success
-
-    trap - EXIT HUP INT TERM
-    rm -f "${BACKUP_PATH}"
-}
-
-tde_negative_missing_master_key()
-{
-    BACKUP_PATH=$(mktemp)
-    RESTORED=0
-
-    cleanup()
-    {
-        if [ "${RESTORED}" -eq 0 ]
-        then
-            tde_restore_file "${BACKUP_PATH}" "${TDE_KEYSTORE_PATH}"
-            if ! tde_probe_server
-            then
-                tde_server_start_expect_success >/dev/null 2>&1 || true
-            fi
-        fi
-
-        rm -f "${BACKUP_PATH}"
-    }
-
-    tde_case_guard
-
-    [ -f "${TDE_KEYSTORE_PATH}" ] ||
-        tde_fail "keystore file not found: ${TDE_KEYSTORE_PATH}"
-
-    cp "${TDE_KEYSTORE_PATH}" "${BACKUP_PATH}" ||
-        tde_fail "failed to backup keystore file."
-
-    ACTIVE_KEY_ID=$(awk -F= '/^ACTIVE_MASTER_KEY_ID=/{print $2; exit}' "${BACKUP_PATH}")
-    WRAP_KEY_CHECK=$(awk -F= '/^WRAP_KEY_CHECK=/{print $2; exit}' "${BACKUP_PATH}")
-    WRAPPED_MASTER_KEY=$(awk -F'[=:]' '/^MASTER_KEY=/{print $3; exit}' "${BACKUP_PATH}")
-
-    [ -n "${ACTIVE_KEY_ID}" ] || tde_fail "failed to read active master key id."
-    [ -n "${WRAP_KEY_CHECK}" ] || tde_fail "failed to read wrap key check."
-    [ -n "${WRAPPED_MASTER_KEY}" ] || tde_fail "failed to read wrapped master key."
-
-    NEW_ACTIVE_KEY_ID=$((ACTIVE_KEY_ID + 1000))
-
-    trap cleanup EXIT HUP INT TERM
-
-    tde_server_stop_expect_success
-
-    cat > "${TDE_KEYSTORE_PATH}" <<EOF
-VERSION=2
-ACTIVE_MASTER_KEY_ID=${NEW_ACTIVE_KEY_ID}
-WRAP_KEY_CHECK=${WRAP_KEY_CHECK}
-MASTER_KEY=${NEW_ACTIVE_KEY_ID}:${WRAPPED_MASTER_KEY}
-EOF
-
-    tde_server_start_expect_failure "smERR_ABORT_TDEMasterKeyHistoryMissing"
-    tde_restore_file "${BACKUP_PATH}" "${TDE_KEYSTORE_PATH}"
-    RESTORED=1
-    tde_server_start_expect_success
-
-    trap - EXIT HUP INT TERM
-    rm -f "${BACKUP_PATH}"
-}
-
-tde_negative_autoload_off()
-{
-    BACKUP_PATH=$(mktemp)
-    RESTORED=0
-
-    cleanup()
-    {
-        if [ "${RESTORED}" -eq 0 ]
-        then
-            tde_restore_file "${BACKUP_PATH}" "${ALTIBASE_PROPERTIES_PATH}"
-            if ! tde_probe_server
-            then
-                tde_server_start_expect_success >/dev/null 2>&1 || true
-            fi
-        fi
-
-        rm -f "${BACKUP_PATH}"
-    }
-
-    tde_case_guard
-
-    cp "${ALTIBASE_PROPERTIES_PATH}" "${BACKUP_PATH}" ||
-        tde_fail "failed to backup property file."
-
-    trap cleanup EXIT HUP INT TERM
-
-    tde_server_stop_expect_success
-    tde_replace_property TDE_AUTO_LOAD 0
-    tde_server_start_expect_failure "smERR_ABORT_TDEAutoLoadDisabled"
-    tde_restore_file "${BACKUP_PATH}" "${ALTIBASE_PROPERTIES_PATH}"
-    RESTORED=1
-    tde_server_start_expect_success
-
-    trap - EXIT HUP INT TERM
-    rm -f "${BACKUP_PATH}"
-}
-
-tde_cleanup_after_suite()
-{
-    tde_case_guard
-    tde_run_best_effort_cleanup
-    tde_replace_property TDE_AUTO_LOAD 1
-    tde_remove_tde_artifacts
-}
+. "${SCRIPT_DIR}/tde_lifecycle.sh"
+. "${SCRIPT_DIR}/tde_fixture.sh"
+. "${SCRIPT_DIR}/tde_startup_negative.sh"
+. "${SCRIPT_DIR}/tde_rotate.sh"
+. "${SCRIPT_DIR}/tde_convert.sh"
+. "${SCRIPT_DIR}/tde_snapshot.sh"
+. "${SCRIPT_DIR}/tde_repro.sh"
 
 case "${1:-}" in
     case_guard)
         tde_case_guard
         ;;
-    bootstrap_init)
-        tde_bootstrap_init
+    reset_environment)
+        tde_reset_environment
+        ;;
+    prepare_base_fixture)
+        tde_prepare_base_fixture
+        ;;
+    finalize_environment)
+        tde_finalize_environment
         ;;
     restart_smoke)
         tde_restart_smoke
+        ;;
+    restart_repeat_smoke)
+        tde_restart_repeat_smoke
+        ;;
+    restart_after_checkpoint)
+        tde_restart_after_checkpoint
+        ;;
+    rotate_master_key)
+        tde_rotate_master_key_once
+        ;;
+    prepare_temp_plain_fixture)
+        tde_prepare_temp_plain_fixture
+        ;;
+    prepare_extended_fixture)
+        tde_prepare_extended_fixture
+        ;;
+    prepare_rotate_once_fixture)
+        tde_prepare_rotate_once_fixture
+        ;;
+    prepare_rotate_twice_fixture)
+        tde_prepare_rotate_twice_fixture
+        ;;
+    prepare_rekey_fixture)
+        tde_prepare_rekey_fixture
+        ;;
+    prepare_new_encrypted_fixture)
+        tde_prepare_new_encrypted_fixture
+        ;;
+    prepare_empty_plain_fixture)
+        tde_prepare_empty_plain_fixture
+        ;;
+    prepare_empty_encrypted_fixture)
+        tde_prepare_empty_encrypted_fixture
+        ;;
+    prepare_rekey_reference_fixture)
+        tde_prepare_rekey_reference_fixture
+        ;;
+    prepare_offline_decrypt_fixture)
+        tde_prepare_offline_decrypt_fixture
+        ;;
+    prepare_snapshot_fixture)
+        tde_prepare_snapshot_fixture
+        ;;
+    prepare_all_plain_fixture)
+        tde_prepare_all_plain_fixture
+        ;;
+    encrypt_tablespace)
+        [ -n "${2:-}" ] || tde_fail "encrypt_tablespace requires a tablespace name."
+        tde_encrypt_tablespace "$2"
+        ;;
+    rekey_tablespace)
+        [ -n "${2:-}" ] || tde_fail "rekey_tablespace requires a tablespace name."
+        tde_rekey_tablespace "$2"
+        ;;
+    decrypt_tablespace)
+        [ -n "${2:-}" ] || tde_fail "decrypt_tablespace requires a tablespace name."
+        tde_decrypt_tablespace "$2"
+        ;;
+    duplicate_keystore_rejected)
+        tde_duplicate_keystore_rejected
+        ;;
+    duplicate_master_key_rejected)
+        tde_duplicate_master_key_rejected
         ;;
     negative_wrap_key)
         tde_negative_wrap_key
@@ -231,14 +95,53 @@ case "${1:-}" in
     negative_invalid_keystore)
         tde_negative_invalid_keystore
         ;;
+    negative_invalid_keystore_version)
+        tde_negative_invalid_keystore_version
+        ;;
+    negative_invalid_keystore_missing_active)
+        tde_negative_invalid_keystore_missing_active
+        ;;
     negative_missing_master_key)
         tde_negative_missing_master_key
+        ;;
+    negative_corrupted_wrapped_tbs_key)
+        tde_negative_corrupted_wrapped_tbs_key
+        ;;
+    negative_corrupted_header_master_key_id)
+        tde_negative_corrupted_header_master_key_id
         ;;
     negative_autoload_off)
         tde_negative_autoload_off
         ;;
-    cleanup_after_suite)
-        tde_cleanup_after_suite
+    plain_only_autoload_off_ok)
+        tde_plain_only_autoload_off_ok
+        ;;
+    all_decrypted_autoload_off_ok)
+        tde_all_decrypted_autoload_off_ok
+        ;;
+    negative_rotated_key_history)
+        tde_negative_rotated_key_history
+        ;;
+    negative_online_operation)
+        tde_negative_online_operation
+        ;;
+    negative_invalid_state)
+        tde_negative_invalid_state
+        ;;
+    snapshot_backup_pre_post_rotate)
+        tde_snapshot_backup_pre_post_rotate
+        ;;
+    snapshot_restore_old_history_ok)
+        tde_snapshot_restore_old_history_ok
+        ;;
+    snapshot_restore_old_history_missing_key_fail)
+        tde_snapshot_restore_old_history_missing_key_fail
+        ;;
+    decrypt_all_and_restart)
+        tde_decrypt_all_and_restart
+        ;;
+    repro_rekey_metadata_mismatch)
+        tde_repro_rekey_metadata_mismatch
         ;;
     *)
         tde_fail "unknown action: ${1:-<empty>}"

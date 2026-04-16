@@ -1,0 +1,16 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Check the dedicated operation view while no TDE task is running.
+iSQL> -- Checks: The singleton operation row stays at NONE/IDLE.
+iSQL> -- Manual reference:
+iSQL> --   doc/altibase-docs/Manuals/Altibase_trunk/eng/iSQL User's Manual.md
+iSQL> SELECT CASE WHEN COUNT(*) = 1 THEN 1 ELSE 0 END AS PASS_IDLE_ROW FROM V$TDE_OPERATION WHERE OPERATION = 'NONE' AND STATE = 'IDLE' AND TARGET_MASTER_KEY_ID = 0;
+PASS_IDLE_ROW
+---------------
+1
+1 row selected.

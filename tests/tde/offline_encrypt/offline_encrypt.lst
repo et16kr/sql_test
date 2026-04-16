@@ -1,0 +1,34 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Encrypt an existing plain MRDB tablespace while offline.
+iSQL> -- Checks: The plain tablespace becomes encrypted and the operation view reports success.
+iSQL> -- Manual reference:
+iSQL> --   doc/altibase-docs/Manuals/Altibase_trunk/eng/iSQL User's Manual.md
+iSQL> SELECT CASE WHEN COUNT(*) = 2 THEN 1 ELSE 0 END AS PASS_PLAIN_COUNT FROM TDE2_PLAIN_T;
+PASS_PLAIN_COUNT 
+------------------
+1           
+1 row selected.
+iSQL> SELECT CASE WHEN COUNT(*) = 1 THEN 1 ELSE 0 END AS PASS_PLAIN_TBS
+  FROM V$TDE_TABLESPACES
+ WHERE NAME = 'TDE2_PLAIN_TBS'
+   AND IS_ENCRYPTED = 1
+   AND ENCRYPT_ALGORITHM = 'AES-256-CTR'
+   AND MASTER_KEY_ID = (SELECT KEY_ID FROM V$TDE_MASTER_KEYS WHERE IS_ACTIVE = 1);
+PASS_PLAIN_TBS 
+----------------
+1           
+1 row selected.
+iSQL> SELECT CASE WHEN COUNT(*) = 1 THEN 1 ELSE 0 END AS PASS_OPERATION
+  FROM V$TDE_OPERATION
+ WHERE OPERATION = 'OFFLINE_ENCRYPT'
+   AND STATE = 'SUCCESS';
+PASS_OPERATION 
+----------------
+1           
+1 row selected.

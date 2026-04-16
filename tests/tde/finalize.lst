@@ -1,0 +1,37 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.3.0.0.0
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 20101
+iSQL> -- Test Purpose: Clean up all known TDE test fixtures and verify no tracked tablespaces remain.
+iSQL> -- Checks: Base, extended, and temporary MRDB tablespaces are removed from both general and dedicated views.
+iSQL> -- Manual reference:
+iSQL> --   doc/altibase-docs/Manuals/Altibase_trunk/eng/iSQL User's Manual.md
+iSQL> SELECT CASE WHEN COUNT(*) = 0 THEN 1 ELSE 0 END AS PASS_TABLESPACES_GONE
+  FROM V$TABLESPACES
+ WHERE NAME IN ('TDE_SQLT_TBS',
+                'TDE2_PLAIN_TBS',
+                'TDE2_ENC_TBS',
+                'TDE_TMP_PLAIN_TBS',
+                'TDE_TMP_NEW_ENC_TBS',
+                'TDE_TMP_EMPTY_PLAIN_TBS',
+                'TDE_REPRO_TBS');
+PASS_TABLESPACES_GONE 
+------------------------
+1           
+1 row selected.
+iSQL> SELECT CASE WHEN COUNT(*) = 0 THEN 1 ELSE 0 END AS PASS_TDE_TABLESPACES_GONE
+  FROM V$TDE_TABLESPACES
+ WHERE NAME IN ('TDE_SQLT_TBS',
+                'TDE2_PLAIN_TBS',
+                'TDE2_ENC_TBS',
+                'TDE_TMP_PLAIN_TBS',
+                'TDE_TMP_NEW_ENC_TBS',
+                'TDE_TMP_EMPTY_PLAIN_TBS',
+                'TDE_REPRO_TBS');
+PASS_TDE_TABLESPACES_GONE 
+----------------------------
+1           
+1 row selected.

@@ -1,0 +1,11 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.3.0.0.0
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 20101
+iSQL> -- Test Purpose: Reset the dedicated TDE test environment and rebuild the base fixture.
+iSQL> -- Checks: Common keystore, master-key, and base encrypted tablespace setup completes without manual output comparison.
+iSQL> -- Manual reference:
+iSQL> --   doc/altibase-docs/Manuals/Altibase_trunk/eng/iSQL User's Manual.md

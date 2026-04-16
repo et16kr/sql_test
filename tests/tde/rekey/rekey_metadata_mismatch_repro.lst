@@ -1,0 +1,40 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Reference: doc/altibase-docs/Manuals/Altibase_trunk/eng/iSQL User's Manual.md
+iSQL> -- Test Purpose: Reject REKEY when on-disk TBS metadata no longer matches
+iSQL> --   the runtime TDE metadata loaded at startup.
+iSQL> -- Checks: After corrupting only the on-disk wrapped TBS key post-startup,
+iSQL> --   REKEY is rejected, the operation view reports FAILED, and the tablespace
+iSQL> --   remains readable after best-effort ONLINE recovery.
+iSQL> -- Note: This standalone repro/regression case is intentionally excluded
+iSQL> --   from tde.ts.
+iSQL> -- Manual reference:
+iSQL> --   doc/altibase-docs/Manuals/Altibase_trunk/eng/iSQL User's Manual.md
+iSQL> SELECT CASE WHEN COUNT(*) = 2 THEN 1 ELSE 0 END AS PASS_REPRO_ROWS
+  FROM TDE_REPRO_T;
+PASS_REPRO_ROWS 
+-----------------
+1           
+1 row selected.
+iSQL> SELECT CASE WHEN COUNT(*) = 1 THEN 1 ELSE 0 END AS PASS_REPRO_TBS
+  FROM V$TDE_TABLESPACES
+ WHERE NAME = 'TDE_REPRO_TBS'
+   AND IS_ENCRYPTED = 1
+   AND MASTER_KEY_ID > 0;
+PASS_REPRO_TBS 
+----------------
+1           
+1 row selected.
+iSQL> SELECT CASE WHEN COUNT(*) = 1 THEN 1 ELSE 0 END AS PASS_REPRO_OPERATION
+  FROM V$TDE_OPERATION
+ WHERE OPERATION = 'REKEY'
+   AND STATE = 'FAILED';
+PASS_REPRO_OPERATION 
+----------------------
+1           
+1 row selected.

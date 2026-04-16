@@ -1,0 +1,26 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Cross-check general and dedicated views after OFFLINE ENCRYPT.
+iSQL> -- Checks: The encrypted tablespace and active-key reference count agree across views.
+iSQL> -- Manual reference:
+iSQL> --   doc/altibase-docs/Manuals/Altibase_trunk/eng/iSQL User's Manual.md
+iSQL> SELECT CASE WHEN COUNT(*) = 1 THEN 1 ELSE 0 END AS PASS_GENERAL_ENC FROM V$TABLESPACES WHERE NAME = 'TDE2_PLAIN_TBS' AND IS_ENCRYPTED = 1;
+PASS_GENERAL_ENC
+-----------------
+1
+1 row selected.
+iSQL> SELECT CASE WHEN COUNT(*) = 1 THEN 1 ELSE 0 END AS PASS_DEDICATED_ENC FROM V$TDE_TABLESPACES WHERE NAME = 'TDE2_PLAIN_TBS' AND IS_ENCRYPTED = 1;
+PASS_DEDICATED_ENC
+-------------------
+1
+1 row selected.
+iSQL> SELECT CASE WHEN (SELECT REFERENCED_TABLESPACE_COUNT FROM V$TDE_MASTER_KEYS WHERE IS_ACTIVE = 1) = 3 THEN 1 ELSE 0 END AS PASS_ACTIVE_REFCOUNT FROM DUAL;
+PASS_ACTIVE_REFCOUNT
+---------------------
+1
+1 row selected.

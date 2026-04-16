@@ -1,24 +1,40 @@
-# MRDB TDE Phase 1 SQL Suite
+# MRDB TDE SQL Suite
 
-This suite validates the Altibase MRDB TDE phase 1 slice with the local
-`sql_test` runner.
+This suite mirrors the internal TDE test model more closely than the previous
+numbered `init.sql/test.sql` chain.
 
-Covered scope:
+## Execution Model
 
-- `ALTER SYSTEM TDE CREATE KEYSTORE`
-- `ALTER SYSTEM TDE CREATE MASTER KEY`
-- `CREATE MEMORY TABLESPACE ... ENCRYPTION`
-- `V$TABLESPACES` visibility
-- restart auto-load
-- startup failure for invalid wrap key / invalid keystore /
-  missing master key history / `TDE_AUTO_LOAD=0`
+The root suite is explicit:
 
-Out of scope:
+- `initialize.sql`
+- one or more single-file tests under the grouped subdirectories
+- `finalize.sql`
 
-- DRDB
-- rotate / rekey
-- existing tablespace encrypt / decrypt
-- redo encryption
+No grouped test depends on `test.sql -> init.sql` auto-discovery, and no
+numbered case is required to run before another numbered case. When a test
+needs extra fixture state, it calls `tests/tde/bin/tde_case.sh` directly.
+
+## Layout
+
+- `initialize.sql`, `finalize.sql`, `tde.ts`
+- `bootstrap/`
+- `admin_negative/`
+- `basic/`
+- `restart/`
+- `startup_negative/`
+- `extended/`
+- `rotate/`
+- `offline_encrypt/`
+- `rekey/`
+- `offline_decrypt/`
+- `invalid_state/`
+- `snapshot/`
+- `final/`
+- `bin/`
+
+Each group directory contains only single-file `.sql` tests plus a matching
+group `.ts` that can be used for focused debugging.
 
 ## Preconditions
 
@@ -27,8 +43,7 @@ Out of scope:
 - `ALTIBASE_HOME` must be set.
 - `TDE_KEYSTORE_PATH` and `TDE_WRAP_KEY_PATH` in `altibase.properties`
   must already point to a dedicated test path.
-- The suite is intentionally standalone and is not included in
-  `tests/tests.ts`.
+- The suite is intentionally standalone and is not included in `tests/tests.ts`.
 
 The helper guards against obviously unsafe paths. By default, paths under
 `/tmp/` or paths containing `sql_test`, `tde_test`, or `tde-test` are treated
@@ -40,14 +55,36 @@ export SQL_TEST_TDE_ALLOW_UNSAFE_PATH=1
 
 ## Recommended Run
 
+Run the whole mirror:
+
 ```bash
 ./bin/altitest tests/tde/tde.ts --server-mode none --continue-on-error
 ```
 
+Run one focused flow:
+
+```bash
+./bin/altitest tests/tde/initialize.sql --server-mode none
+./bin/altitest tests/tde/rotate/rotate_reference_count_check.sql --server-mode none
+./bin/altitest tests/tde/finalize.sql --server-mode none
+```
+
+Run one grouped slice after the standard lifecycle when you want several
+related cases together:
+
+```bash
+./bin/altitest tests/tde/initialize.sql --server-mode none
+./bin/altitest tests/tde/rotate/rotate.ts --server-mode none --continue-on-error
+./bin/altitest tests/tde/finalize.sql --server-mode none
+```
+
 ## Notes
 
-- The suite shares one server-wide TDE fixture across ordered cases.
 - Negative cases restore the original file state before returning success.
-- No new `sql_test` directive or runner feature is required for this suite.
+- `rekey/rekey_metadata_mismatch_repro.sql` is a standalone repro/regression
+  case for the reviewed metadata-mismatch bug and is intentionally excluded
+  from `tde.ts`.
+- Snapshot coverage is implemented with helper-driven checkpoint-image copies
+  under the dedicated test path so the suite can stay standalone.
 - Manual reference used in SQL comments:
   `doc/altibase-docs/Manuals/Altibase_trunk/eng/iSQL User's Manual.md`

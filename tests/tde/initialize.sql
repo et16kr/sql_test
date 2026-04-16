@@ -1,0 +1,6 @@
+-- Test Purpose: Reset the dedicated TDE test environment and rebuild the base fixture.
+-- Checks: Common keystore, master-key, and base encrypted tablespace setup completes without manual output comparison.
+-- Manual reference:
+--   doc/altibase-docs/Manuals/Altibase_trunk/eng/iSQL User's Manual.md
+--+TIMEOUT_SEC 600;
+--+SYSTEM bash ./tests/tde/bin/tde_case.sh prepare_base_fixture;

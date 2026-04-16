@@ -1,0 +1,31 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.1.0.2.4
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 17730
+iSQL> -- Test Purpose: Cross-check general and dedicated TDE views for the base tablespace.
+iSQL> -- Checks: View rows match and the operation view is idle.
+iSQL> -- Manual reference:
+iSQL> --   doc/altibase-docs/Manuals/Altibase_trunk/eng/iSQL User's Manual.md
+iSQL> SELECT CASE WHEN COUNT(*) = 1 THEN 1 ELSE 0 END AS PASS_GENERAL_VIEW FROM V$TABLESPACES WHERE NAME = 'TDE_SQLT_TBS' AND IS_ENCRYPTED = 1;
+PASS_GENERAL_VIEW
+-------------------
+1
+1 row selected.
+iSQL> SELECT CASE WHEN COUNT(*) = 1 THEN 1 ELSE 0 END AS PASS_TDE_VIEW FROM V$TDE_TABLESPACES WHERE NAME = 'TDE_SQLT_TBS' AND IS_ENCRYPTED = 1 AND MASTER_KEY_ID = (SELECT MASTER_KEY_ID FROM V$TABLESPACES WHERE NAME = 'TDE_SQLT_TBS');
+PASS_TDE_VIEW
+---------------
+1
+1 row selected.
+iSQL> SELECT CASE WHEN COUNT(*) = 1 THEN 1 ELSE 0 END AS PASS_MASTER_KEY_VIEW FROM V$TDE_MASTER_KEYS WHERE IS_ACTIVE = 1 AND REFERENCED_TABLESPACE_COUNT = 1;
+PASS_MASTER_KEY_VIEW
+----------------------
+1
+1 row selected.
+iSQL> SELECT CASE WHEN COUNT(*) = 1 THEN 1 ELSE 0 END AS PASS_IDLE_OPERATION FROM V$TDE_OPERATION WHERE OPERATION = 'NONE' AND STATE = 'IDLE';
+PASS_IDLE_OPERATION
+---------------------
+1
+1 row selected.
