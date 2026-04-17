@@ -293,68 +293,31 @@ EOF
 
 tde_negative_corrupted_wrapped_tbs_key()
 {
-    BACKUP_DIR=$(mktemp -d)
     RESTORED=0
 
     cleanup()
     {
         if [ "${RESTORED}" -eq 0 ]
         then
-            rm -f "${TDE_DB_DIR}/${TDE_SQLT_TABLESPACE}"-*
-
-            for sFilePath in "${BACKUP_DIR}"/*
-            do
-                if [ -f "${sFilePath}" ]
-                then
-                    cp "${sFilePath}" "${TDE_DB_DIR}/" ||
-                        tde_fail "failed to restore DB file: ${sFilePath}"
-                fi
-            done
-
-            if ! tde_probe_server
-            then
-                tde_server_start_expect_success >/dev/null 2>&1 || true
-            fi
+            tde_prepare_base_fixture >/dev/null 2>&1 || true
         fi
-
-        rm -rf "${BACKUP_DIR}"
     }
 
     tde_case_guard
 
     trap cleanup EXIT HUP INT TERM
 
-    for sFilePath in $(tde_get_tbs_files "${TDE_SQLT_TABLESPACE}")
-    do
-        cp "${sFilePath}" "${BACKUP_DIR}/" ||
-            tde_fail "failed to backup tablespace file: ${sFilePath}"
-    done
-
     tde_server_stop_expect_success
     tde_patch_tbs_files_hex "${TDE_SQLT_TABLESPACE}" "${TDE_HDR_OFFSET_WRAPPED_TBS_KEY}" "00112233"
     tde_server_start_expect_failure "smERR_ABORT_TDEUnwrapFailure"
-
-    rm -f "${TDE_DB_DIR}/${TDE_SQLT_TABLESPACE}"-*
-
-    for sFilePath in "${BACKUP_DIR}"/*
-    do
-        if [ -f "${sFilePath}" ]
-        then
-            cp "${sFilePath}" "${TDE_DB_DIR}/" ||
-                tde_fail "failed to restore DB file: ${sFilePath}"
-        fi
-    done
-
+    tde_prepare_base_fixture
     RESTORED=1
-    tde_server_start_expect_success
 
     trap - EXIT HUP INT TERM
-    rm -rf "${BACKUP_DIR}"
 }
 
 tde_negative_corrupted_header_master_key_id()
 {
-    BACKUP_DIR=$(mktemp -d)
     RESTORED=0
     ACTIVE_KEY_ID=
     CORRUPTED_KEY_ID=
@@ -364,24 +327,8 @@ tde_negative_corrupted_header_master_key_id()
     {
         if [ "${RESTORED}" -eq 0 ]
         then
-            rm -f "${TDE_DB_DIR}/${TDE_SQLT_TABLESPACE}"-*
-
-            for sFilePath in "${BACKUP_DIR}"/*
-            do
-                if [ -f "${sFilePath}" ]
-                then
-                    cp "${sFilePath}" "${TDE_DB_DIR}/" ||
-                        tde_fail "failed to restore DB file: ${sFilePath}"
-                fi
-            done
-
-            if ! tde_probe_server
-            then
-                tde_server_start_expect_success >/dev/null 2>&1 || true
-            fi
+            tde_prepare_base_fixture >/dev/null 2>&1 || true
         fi
-
-        rm -rf "${BACKUP_DIR}"
     }
 
     tde_case_guard
@@ -392,32 +339,13 @@ tde_negative_corrupted_header_master_key_id()
     CORRUPTED_KEY_ID=$((ACTIVE_KEY_ID + 1000))
     CORRUPTED_HEX=$(tde_uint32_to_le_hex "${CORRUPTED_KEY_ID}")
 
-    for sFilePath in $(tde_get_tbs_files "${TDE_SQLT_TABLESPACE}")
-    do
-        cp "${sFilePath}" "${BACKUP_DIR}/" ||
-            tde_fail "failed to backup tablespace file: ${sFilePath}"
-    done
-
     tde_server_stop_expect_success
     tde_patch_tbs_files_hex "${TDE_SQLT_TABLESPACE}" "${TDE_HDR_OFFSET_MASTER_KEY_ID}" "${CORRUPTED_HEX}"
     tde_server_start_expect_failure "smERR_ABORT_TDEMasterKeyHistoryMissing"
-
-    rm -f "${TDE_DB_DIR}/${TDE_SQLT_TABLESPACE}"-*
-
-    for sFilePath in "${BACKUP_DIR}"/*
-    do
-        if [ -f "${sFilePath}" ]
-        then
-            cp "${sFilePath}" "${TDE_DB_DIR}/" ||
-                tde_fail "failed to restore DB file: ${sFilePath}"
-        fi
-    done
-
+    tde_prepare_base_fixture
     RESTORED=1
-    tde_server_start_expect_success
 
     trap - EXIT HUP INT TERM
-    rm -rf "${BACKUP_DIR}"
 }
 
 tde_negative_autoload_off()
@@ -494,7 +422,7 @@ tde_plain_only_autoload_off_ok()
 
     tde_server_stop_expect_success
     tde_replace_property TDE_AUTO_LOAD 0
-    tde_remove_tde_artifacts
+    rm -f "${TDE_KEYSTORE_PATH}" "${TDE_WRAP_KEY_PATH}"
     tde_server_start_expect_success
     tde_server_stop_expect_success
     tde_restore_file "${BACKUP_PROP}" "${ALTIBASE_PROPERTIES_PATH}"

@@ -9,13 +9,41 @@ tde_case_guard()
 
 tde_reset_environment()
 {
-    tde_case_guard
-    tde_run_best_effort_cleanup
+    sStartLogPath=
+
+    tde_require_env
+    tde_require_safe_paths
     tde_replace_property TDE_AUTO_LOAD 1
-    tde_reset_snapshots
+
+    if ! tde_probe_server
+    then
+        sStartLogPath=$(mktemp)
+
+        if ! tde_try_server_start "${sStartLogPath}"
+        then
+            rm -f "${sStartLogPath}"
+            tde_force_rebuild_database
+            tde_server_start_expect_success
+        else
+            rm -f "${sStartLogPath}"
+        fi
+    fi
+
+    tde_run_best_effort_cleanup
     tde_server_stop_expect_success
     tde_remove_tde_artifacts
-    tde_server_start_expect_success
+    tde_reset_snapshots
+
+    sStartLogPath=$(mktemp)
+
+    if ! tde_try_server_start "${sStartLogPath}"
+    then
+        rm -f "${sStartLogPath}"
+        tde_force_rebuild_database
+        tde_server_start_expect_success
+    else
+        rm -f "${sStartLogPath}"
+    fi
 }
 
 tde_prepare_base_fixture()
@@ -68,7 +96,14 @@ tde_restart_after_checkpoint()
 
 tde_finalize_environment()
 {
-    tde_case_guard
+    tde_require_env
+    tde_require_safe_paths
+
+    if ! tde_probe_server
+    then
+        tde_server_start_expect_success
+    fi
+
     tde_run_best_effort_cleanup
     tde_replace_property TDE_AUTO_LOAD 1
     tde_reset_snapshots

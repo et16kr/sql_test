@@ -49,7 +49,7 @@ EOF
 ALTER TABLESPACE ${REPRO_TABLESPACE} ENCRYPTION REKEY;
 EOF
 
-    tde_run_isql_best_effort <<EOF
+    tde_run_isql_checked <<EOF
 ALTER TABLESPACE ${REPRO_TABLESPACE} ONLINE;
 EOF
 

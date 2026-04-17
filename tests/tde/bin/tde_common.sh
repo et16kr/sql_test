@@ -43,6 +43,12 @@ tde_require_env()
 
     [ -f "${ALTIBASE_PROPERTIES_PATH}" ] ||
         tde_fail "properties file not found: ${ALTIBASE_PROPERTIES_PATH}"
+
+    TDE_SERVER_HOST="${ALTIBASE_SERVER_NAME:-localhost}"
+    TDE_SERVER_PORT="${ALTIBASE_PORT_NO:-$(tde_get_property PORT_NO)}"
+
+    [ -n "${TDE_SERVER_PORT}" ] ||
+        tde_fail "ALTIBASE_PORT_NO and PORT_NO are not set."
 }
 
 tde_get_property()
@@ -119,18 +125,52 @@ tde_require_safe_paths()
 
 tde_probe_server()
 {
-    printf 'SELECT 1 FROM DUAL;\nquit\n' | is -silent >/dev/null 2>&1
+    sOutPath=$(mktemp)
+
+    printf 'SELECT 1 FROM DUAL;\nquit\n' |
+        is -s "${TDE_SERVER_HOST}" -port "${TDE_SERVER_PORT}" -silent >"${sOutPath}" 2>&1
+
+    if [ "$?" -ne 0 ] || grep -q "\\[ERR-" "${sOutPath}"
+    then
+        rm -f "${sOutPath}"
+        return 1
+    fi
+
+    if awk '
+        /^[[:space:]]*1[[:space:]]*$/ {
+            sFound = 1;
+        }
+
+        END {
+            exit !sFound;
+        }
+    ' "${sOutPath}"
+    then
+        rm -f "${sOutPath}"
+        return 0
+    fi
+
+    rm -f "${sOutPath}"
+    return 1
 }
 
 tde_wait_for_server_up()
 {
     sTry=0
+    sStableCount=0
 
     while [ "${sTry}" -lt 30 ]
     do
         if tde_probe_server
         then
-            return 0
+            sStableCount=$((sStableCount + 1))
+
+            if [ "${sStableCount}" -ge 2 ]
+            then
+                return 0
+            fi
+        else
+            sStableCount=0
         fi
 
         sleep 1
@@ -169,6 +209,14 @@ tde_run_server()
     aLogPath=$2
 
     server "${aMode}" >"${aLogPath}" 2>&1 || true
+}
+
+tde_try_server_start()
+{
+    aLogPath=$1
+
+    tde_run_server start "${aLogPath}"
+    tde_wait_for_server_up
 }
 
 tde_dump_log()
@@ -412,7 +460,21 @@ tde_run_isql_raw()
     cat > "${sSqlPath}"
     printf '\nquit\n' >> "${sSqlPath}"
 
-    is -f "${sSqlPath}" > "${aOutPath}" 2>&1 || true
+    is -s "${TDE_SERVER_HOST}" -port "${TDE_SERVER_PORT}" -f "${sSqlPath}" > "${aOutPath}" 2>&1 || true
+
+    rm -f "${sSqlPath}"
+}
+
+tde_run_sysdba_raw()
+{
+    aOutPath=$1
+    sSqlPath=$(mktemp)
+
+    cat > "${sSqlPath}"
+    printf '\nquit\n' >> "${sSqlPath}"
+
+    "${ALTIBASE_HOME}/bin/isql" -u sys -p MANAGER -sysdba -noprompt \
+        < "${sSqlPath}" > "${aOutPath}" 2>&1 || true
 
     rm -f "${sSqlPath}"
 }
@@ -768,9 +830,51 @@ DROP TABLESPACE ${TDE_SQLT_TABLESPACE} INCLUDING CONTENTS AND DATAFILES;
 ALTER SYSTEM CHECKPOINT;"
 }
 
+tde_force_rebuild_database()
+{
+    sDbName=$(tde_get_property DB_NAME)
+    sOutPath=$(mktemp)
+
+    [ -n "${sDbName}" ] || tde_fail "DB_NAME is not set."
+
+    tde_run_sysdba_raw "${sOutPath}" <<EOF
+startup process;
+drop database ${sDbName};
+create database ${sDbName} INITSIZE=10M noarchivelog character set UTF8 national character set UTF8;
+EOF
+
+    if ! grep -q "Create success." "${sOutPath}"
+    then
+        sed -n '1,200p' "${sOutPath}" >&2
+        rm -f "${sOutPath}"
+        tde_fail "failed to rebuild the database baseline."
+    fi
+
+    rm -f "${sOutPath}"
+
+    sOutPath=$(mktemp)
+    tde_run_sysdba_raw "${sOutPath}" <<'EOF'
+ALTER SYSTEM SET CHECKPOINT_BULK_WRITE_PAGE_COUNT = 0;
+ALTER SYSTEM SET CHECKPOINT_BULK_WRITE_SLEEP_SEC  = 0;
+ALTER SYSTEM SET CHECKPOINT_BULK_WRITE_SLEEP_USEC = 0;
+shutdown abort;
+EOF
+    rm -f "${sOutPath}"
+
+    tde_wait_for_server_down >/dev/null 2>&1 || true
+}
+
 tde_remove_tde_artifacts()
 {
     rm -f "${TDE_KEYSTORE_PATH}" "${TDE_WRAP_KEY_PATH}"
+    rm -f \
+        ${TDE_DB_DIR}/${TDE_SQLT_TABLESPACE}-* \
+        ${TDE_DB_DIR}/${TDE_EXT_PLAIN_TABLESPACE}-* \
+        ${TDE_DB_DIR}/${TDE_EXT_ENC_TABLESPACE}-* \
+        ${TDE_DB_DIR}/${TDE_TMP_PLAIN_TABLESPACE}-* \
+        ${TDE_DB_DIR}/${TDE_TMP_EMPTY_PLAIN_TABLESPACE}-* \
+        ${TDE_DB_DIR}/${TDE_TMP_NEW_ENC_TABLESPACE}-* \
+        ${TDE_DB_DIR}/${TDE_REPRO_TABLESPACE}-*
 }
 
 tde_reset_snapshots()

@@ -7,6 +7,11 @@ tde_rotate_master_key_once()
 ALTER SYSTEM TDE ROTATE MASTER KEY;
 ALTER SYSTEM CHECKPOINT;
 EOF
+
+    if ! tde_wait_for_server_up
+    then
+        tde_fail "server did not become ready after rotating the master key."
+    fi
 }
 
 tde_prepare_rotate_once_fixture()
