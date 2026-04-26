@@ -13,5 +13,6 @@
 ./snapshot/snapshot.ts
 ./security_metadata/security_metadata.ts
 ./ciphertext/ciphertext.ts
+./crash/crash.ts
 ./final/final.ts
 ./finalize.sql | timeout_sec=600

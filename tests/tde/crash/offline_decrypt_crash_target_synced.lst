@@ -1,0 +1,34 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.3.0.0.0
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 20101
+iSQL> -- Test Purpose: Recover an offline decrypt crash after the plain target file is synced.
+iSQL> -- Checks: Startup rolls back to the encrypted source image and data remains readable.
+iSQL> -- Manual reference:
+iSQL> --   /home/et16/work/altidev4/docs/manuals/altibase/trunk/eng/iSQL User's Manual.md
+iSQL> SELECT CASE WHEN COUNT(*) = 2 THEN 1 ELSE 0 END AS PASS_ROWS FROM TDE2_PLAIN_T;
+PASS_ROWS   
+--------------
+1           
+1 row selected.
+iSQL> SELECT CASE WHEN COUNT(*) = 1 THEN 1 ELSE 0 END AS PASS_STILL_ENCRYPTED
+  FROM V$TDE_TABLESPACES
+ WHERE NAME = 'TDE2_PLAIN_TBS'
+   AND IS_ENCRYPTED = 1
+   AND MASTER_KEY_ID > 0;
+PASS_STILL_ENCRYPTED 
+-----------------------
+1           
+1 row selected.
+iSQL> SELECT CASE WHEN COUNT(*) = 1 THEN 1 ELSE 0 END AS PASS_OPERATION_IDLE
+  FROM V$TDE_OPERATION
+ WHERE OPERATION = 'NONE'
+   AND STATE = 'IDLE'
+   AND TARGET_MASTER_KEY_ID = 0;
+PASS_OPERATION_IDLE 
+----------------------
+1           
+1 row selected.

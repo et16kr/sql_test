@@ -10,6 +10,7 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 . "${SCRIPT_DIR}/tde_snapshot.sh"
 . "${SCRIPT_DIR}/tde_repro.sh"
 . "${SCRIPT_DIR}/tde_security.sh"
+. "${SCRIPT_DIR}/tde_crash.sh"
 
 case "${1:-}" in
     case_guard)
@@ -164,6 +165,24 @@ case "${1:-}" in
         ;;
     offline_convert_fresh_nonce)
         tde_offline_convert_fresh_nonce
+        ;;
+    crash_offline_encrypt_writing_target)
+        tde_crash_offline_encrypt_writing_target
+        ;;
+    crash_offline_encrypt_target_synced)
+        tde_crash_offline_encrypt_target_synced
+        ;;
+    crash_offline_encrypt_flush_tbs_node)
+        tde_crash_offline_encrypt_flush_tbs_node
+        ;;
+    crash_offline_decrypt_target_synced)
+        tde_crash_offline_decrypt_target_synced
+        ;;
+    crash_rekey_committed)
+        tde_crash_rekey_committed
+        ;;
+    crash_operation_journal_resume)
+        tde_crash_operation_journal_resume
         ;;
     *)
         tde_fail "unknown action: ${1:-<empty>}"
