@@ -14,5 +14,6 @@
 ./security_metadata/security_metadata.ts
 ./ciphertext/ciphertext.ts
 ./crash/crash.ts
+./log/log.ts
 ./final/final.ts
 ./finalize.sql | timeout_sec=600

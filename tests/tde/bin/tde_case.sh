@@ -11,6 +11,7 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 . "${SCRIPT_DIR}/tde_repro.sh"
 . "${SCRIPT_DIR}/tde_security.sh"
 . "${SCRIPT_DIR}/tde_crash.sh"
+. "${SCRIPT_DIR}/tde_log.sh"
 
 case "${1:-}" in
     case_guard)
@@ -183,6 +184,15 @@ case "${1:-}" in
         ;;
     crash_operation_journal_resume)
         tde_crash_operation_journal_resume
+        ;;
+    log_redo_undo_plaintext_absent)
+        tde_log_redo_undo_plaintext_absent
+        ;;
+    log_recovery_after_abort)
+        tde_log_recovery_after_abort
+        ;;
+    log_replication_reader_smoke)
+        tde_log_replication_reader_smoke
         ;;
     *)
         tde_fail "unknown action: ${1:-<empty>}"

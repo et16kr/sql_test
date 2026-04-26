@@ -1,0 +1,36 @@
+-----------------------------------------------------------------
+     Altibase Client Query utility.
+     Release Version 7.3.0.0.0
+     Copyright 2000, ALTIBASE Corporation or its subsidiaries.
+     All Rights Reserved.
+-----------------------------------------------------------------
+ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 20101
+iSQL> -- Test Purpose: Verify encrypted tablespace redo/undo memory log payloads do not expose row plaintext.
+iSQL> -- Checks: SQL-visible committed and rolled-back rows remain correct while log files contain no deterministic markers.
+iSQL> -- Manual reference:
+iSQL> --   /home/et16/work/altidev4/docs/manuals/altibase/trunk/eng/iSQL User's Manual.md
+iSQL> SELECT CASE WHEN COUNT(*) = 1 THEN 1 ELSE 0 END AS PASS_REDO_ROW
+  FROM TDE_SQLT_T
+ WHERE I = 1101
+   AND V = 'TDE11_REDO_MARKER';
+PASS_REDO_ROW 
+----------------
+1           
+1 row selected.
+iSQL> SELECT CASE WHEN COUNT(*) = 1 THEN 1 ELSE 0 END AS PASS_UNDO_ROW
+  FROM TDE_SQLT_T
+ WHERE I = 1102
+   AND V = 'TDE11_UNDO_BASE';
+PASS_UNDO_ROW 
+----------------
+1           
+1 row selected.
+iSQL> SELECT CASE WHEN COUNT(*) = 1 THEN 1 ELSE 0 END AS PASS_ENCRYPTED_TBS
+  FROM V$TDE_TABLESPACES
+ WHERE NAME = 'TDE_SQLT_TBS'
+   AND IS_ENCRYPTED = 1
+   AND MASTER_KEY_ID > 0;
+PASS_ENCRYPTED_TBS 
+---------------------
+1           
+1 row selected.
