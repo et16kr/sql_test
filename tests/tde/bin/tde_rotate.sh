@@ -67,6 +67,14 @@ tde_negative_rotated_key_history()
     [ -f "${TDE_KEYSTORE_PATH}" ] ||
         tde_fail "keystore file not found: ${TDE_KEYSTORE_PATH}"
 
+    if tde_keystore_is_v3
+    then
+        tde_expect_missing_history_by_header \
+            "${TDE_EXT_ENC_TABLESPACE}" \
+            "v3_rotated_key_history"
+        return
+    fi
+
     cp "${TDE_KEYSTORE_PATH}" "${BACKUP_PATH}" ||
         tde_fail "failed to backup keystore file."
 

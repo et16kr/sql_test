@@ -75,6 +75,14 @@ tde_snapshot_restore_old_history_missing_key_fail()
     cp "${TDE_KEYSTORE_PATH}" "${BACKUP_PATH}" ||
         tde_fail "failed to backup keystore file."
 
+    if tde_keystore_is_v3
+    then
+        tde_expect_missing_history_by_header \
+            "${TDE_SQLT_TABLESPACE}" \
+            "v3_snapshot_missing_key"
+        return
+    fi
+
     ACTIVE_KEY_ID=$(awk -F= '/^ACTIVE_MASTER_KEY_ID=/{print $2; exit}' "${BACKUP_PATH}")
 
     [ -n "${ACTIVE_KEY_ID}" ] || tde_fail "failed to read active master key id."

@@ -650,6 +650,52 @@ tde_uint32_to_le_hex()
     perl -e 'printf "%s\n", unpack("H*", pack("V", shift));' "${aValue}"
 }
 
+tde_keystore_is_v3()
+{
+    [ -f "${TDE_KEYSTORE_PATH}" ] || return 1
+
+    [ "$(od -An -tx1 -N4 "${TDE_KEYSTORE_PATH}" | tr -d ' \n')" = "41544b53" ]
+}
+
+tde_expect_missing_history_by_header()
+{
+    aTablespaceName=$1
+    aSnapshotName=$2
+    RESTORED=0
+
+    cleanup()
+    {
+        if [ "${RESTORED}" -eq 0 ]
+        then
+            tde_server_stop_expect_success >/dev/null 2>&1 || true
+            tde_restore_snapshot_state "${aSnapshotName}" 1 0
+            tde_server_start_expect_success >/dev/null 2>&1 || true
+        fi
+    }
+
+    tde_case_guard
+
+    tde_checkpoint
+    tde_snapshot_state "${aSnapshotName}" 1 0
+
+    ACTIVE_KEY_ID=$(tde_get_active_master_key_id)
+    CORRUPTED_KEY_ID=$((ACTIVE_KEY_ID + 1000))
+    CORRUPTED_HEX=$(tde_uint32_to_le_hex "${CORRUPTED_KEY_ID}")
+
+    trap cleanup EXIT HUP INT TERM
+
+    tde_server_stop_expect_success
+    tde_patch_tbs_files_hex "${aTablespaceName}" \
+        "${TDE_HDR_OFFSET_MASTER_KEY_ID}" \
+        "${CORRUPTED_HEX}"
+    tde_server_start_expect_failure "smERR_ABORT_TDEMasterKeyHistoryMissing"
+    tde_restore_snapshot_state "${aSnapshotName}" 1 0
+    RESTORED=1
+    tde_server_start_expect_success
+
+    trap - EXIT HUP INT TERM
+}
+
 tde_snapshot_dir()
 {
     printf '%s/%s\n' "${TDE_SNAPSHOT_ROOT}" "$1"

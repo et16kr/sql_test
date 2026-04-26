@@ -258,6 +258,14 @@ tde_negative_missing_master_key()
     [ -f "${TDE_KEYSTORE_PATH}" ] ||
         tde_fail "keystore file not found: ${TDE_KEYSTORE_PATH}"
 
+    if tde_keystore_is_v3
+    then
+        tde_expect_missing_history_by_header \
+            "${TDE_SQLT_TABLESPACE}" \
+            "v3_missing_master_key"
+        return
+    fi
+
     cp "${TDE_KEYSTORE_PATH}" "${BACKUP_PATH}" ||
         tde_fail "failed to backup keystore file."
 
