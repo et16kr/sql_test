@@ -11,5 +11,7 @@
 ./offline_decrypt/offline_decrypt.ts
 ./invalid_state/invalid_state.ts
 ./snapshot/snapshot.ts
+./security_metadata/security_metadata.ts
+./ciphertext/ciphertext.ts
 ./final/final.ts
 ./finalize.sql | timeout_sec=600

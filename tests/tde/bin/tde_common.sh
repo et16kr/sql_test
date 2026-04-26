@@ -24,6 +24,14 @@ TDE_HDR_OFFSET_VERSION=728
 TDE_HDR_OFFSET_ALGORITHM=732
 TDE_HDR_OFFSET_MASTER_KEY_ID=736
 TDE_HDR_OFFSET_WRAPPED_TBS_KEY=740
+TDE_HDR_OFFSET_KEY_CHECK=772
+TDE_HDR_OFFSET_FILE_NONCE=788
+TDE_HDR_OFFSET_FLAGS=796
+TDE_HDR_OFFSET_MAGIC=800
+TDE_HDR_OFFSET_KEY_EPOCH=804
+TDE_HDR_OFFSET_KEY_WRAP_NONCE=808
+TDE_HDR_OFFSET_HEADER_HMAC=816
+TDE_HDR_BODY_OFFSET=4096
 
 tde_fail()
 {
@@ -638,6 +646,101 @@ tde_patch_tbs_files_hex()
     do
         sFound=1
         tde_patch_file_hex "${sFilePath}" "${aOffset}" "${aHex}"
+    done
+
+    [ "${sFound}" -eq 1 ] || tde_fail "tablespace files not found: ${aTablespaceName}"
+}
+
+tde_xor_file_byte()
+{
+    aFilePath=$1
+    aOffset=$2
+    aMask=${3:-1}
+
+    perl -e '
+        my ($sPath, $sOffset, $sMask) = @ARGV;
+        open(my $sFile, "+<", $sPath) or die "open failed";
+        binmode($sFile);
+        seek($sFile, $sOffset, 0) or die "seek failed";
+        read($sFile, my $sByte, 1) == 1 or die "read failed";
+        seek($sFile, $sOffset, 0) or die "seek failed";
+        print {$sFile} chr(ord($sByte) ^ hex($sMask)) or die "write failed";
+        close($sFile) or die "close failed";
+    ' "${aFilePath}" "${aOffset}" "${aMask}" ||
+        tde_fail "failed to xor file byte: ${aFilePath}"
+}
+
+tde_xor_tbs_files_byte()
+{
+    aTablespaceName=$1
+    aOffset=$2
+    aMask=${3:-1}
+    sFound=0
+
+    for sFilePath in $(tde_get_tbs_files "${aTablespaceName}")
+    do
+        sFound=1
+        tde_xor_file_byte "${sFilePath}" "${aOffset}" "${aMask}"
+    done
+
+    [ "${sFound}" -eq 1 ] || tde_fail "tablespace files not found: ${aTablespaceName}"
+}
+
+tde_read_file_hex()
+{
+    aFilePath=$1
+    aOffset=$2
+    aLength=$3
+
+    perl -e '
+        my ($sPath, $sOffset, $sLength) = @ARGV;
+        open(my $sFile, "<", $sPath) or die "open failed";
+        binmode($sFile);
+        seek($sFile, $sOffset, 0) or die "seek failed";
+        read($sFile, my $sBytes, $sLength) == $sLength or die "read failed";
+        close($sFile) or die "close failed";
+        print unpack("H*", $sBytes), "\n";
+    ' "${aFilePath}" "${aOffset}" "${aLength}" ||
+        tde_fail "failed to read file bytes: ${aFilePath}"
+}
+
+tde_tbs_has_plaintext()
+{
+    aTablespaceName=$1
+    aPlainText=$2
+
+    for sFilePath in $(tde_get_tbs_files "${aTablespaceName}")
+    do
+        if LC_ALL=C grep -a -F -q -- "${aPlainText}" "${sFilePath}"
+        then
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+tde_assert_tbs_plaintext_absent()
+{
+    aTablespaceName=$1
+    aPlainText=$2
+
+    if tde_tbs_has_plaintext "${aTablespaceName}" "${aPlainText}"
+    then
+        tde_fail "plaintext marker was found in encrypted files: ${aPlainText}"
+    fi
+}
+
+tde_assert_tbs_v3_header_magic()
+{
+    aTablespaceName=$1
+    sFound=0
+
+    for sFilePath in $(tde_get_tbs_files "${aTablespaceName}")
+    do
+        sFound=1
+        [ "$(tde_read_file_hex "${sFilePath}" "${TDE_HDR_OFFSET_MAGIC}" 4)" = "41544445" ] ||
+            tde_fail "TDE v3 header magic not found: ${sFilePath}"
     done
 
     [ "${sFound}" -eq 1 ] || tde_fail "tablespace files not found: ${aTablespaceName}"

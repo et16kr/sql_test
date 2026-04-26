@@ -9,6 +9,7 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 . "${SCRIPT_DIR}/tde_convert.sh"
 . "${SCRIPT_DIR}/tde_snapshot.sh"
 . "${SCRIPT_DIR}/tde_repro.sh"
+. "${SCRIPT_DIR}/tde_security.sh"
 
 case "${1:-}" in
     case_guard)
@@ -142,6 +143,27 @@ case "${1:-}" in
         ;;
     repro_rekey_metadata_mismatch)
         tde_repro_rekey_metadata_mismatch
+        ;;
+    negative_corrupted_keystore_hmac)
+        tde_negative_corrupted_keystore_hmac
+        ;;
+    negative_corrupted_checkpoint_header_hmac)
+        tde_negative_corrupted_checkpoint_header_hmac
+        ;;
+    v2_compat_or_reject)
+        tde_v2_compat_or_reject
+        ;;
+    encrypted_file_no_plaintext)
+        tde_encrypted_file_no_plaintext
+        ;;
+    plain_header_encrypted_body)
+        tde_plain_header_encrypted_body
+        ;;
+    same_page_ciphertext_changes_after_checkpoint)
+        tde_same_page_ciphertext_changes_after_checkpoint
+        ;;
+    offline_convert_fresh_nonce)
+        tde_offline_convert_fresh_nonce
         ;;
     *)
         tde_fail "unknown action: ${1:-<empty>}"
