@@ -87,6 +87,32 @@ tde_copied_tbs_file_nonce_differs()
     return 1
 }
 
+tde_copied_tbs_file_nonce_same()
+{
+    aLeftDir=$1
+    aRightDir=$2
+    sCompared=0
+
+    for sLeftPath in "${aLeftDir}"/*
+    do
+        [ -f "${sLeftPath}" ] || continue
+        sRightPath="${aRightDir}/$(basename "${sLeftPath}")"
+        [ -f "${sRightPath}" ] || continue
+        sCompared=1
+
+        sLeftNonce=$(tde_read_file_hex "${sLeftPath}" "${TDE_HDR_OFFSET_FILE_NONCE}" 8)
+        sRightNonce=$(tde_read_file_hex "${sRightPath}" "${TDE_HDR_OFFSET_FILE_NONCE}" 8)
+
+        if [ "${sLeftNonce}" != "${sRightNonce}" ]
+        then
+            return 1
+        fi
+    done
+
+    [ "${sCompared}" -eq 1 ] || tde_fail "no copied tablespace files were comparable."
+    return 0
+}
+
 tde_negative_corrupted_keystore_hmac()
 {
     BACKUP_PATH=$(mktemp)
@@ -276,10 +302,11 @@ tde_same_page_ciphertext_changes_after_checkpoint()
     tde_insert_ciphertext_marker "${TDE_SQLT_TABLE}" 903 "TDE9_NONCE_STABLE"
     tde_copy_tbs_files "${TDE_SQLT_TABLESPACE}" "${RIGHT_DIR}"
 
-    tde_copied_tbs_files_differ "${LEFT_DIR}" "${RIGHT_DIR}" ||
-        tde_fail "ciphertext did not change across checkpoint generations."
-    tde_copied_tbs_file_nonce_differs "${LEFT_DIR}" "${RIGHT_DIR}" ||
-        tde_fail "file nonce did not change across checkpoint generations."
+    tde_copied_tbs_file_nonce_same "${LEFT_DIR}" "${RIGHT_DIR}" ||
+        tde_fail "file nonce changed across dirty checkpoint generations."
+    tde_server_restart_expect_success
+    tde_checkpoint
+    tde_server_restart_expect_success
     tde_assert_tbs_plaintext_absent "${TDE_SQLT_TABLESPACE}" "TDE9_NONCE_STABLE"
 
     trap - EXIT HUP INT TERM

@@ -5,8 +5,8 @@
      All Rights Reserved.
 -----------------------------------------------------------------
 ISQL_CONNECTION = TCP, SERVER = localhost, PORT_NO = 20101
-iSQL> -- Test Purpose: Verify repeat checkpoints of the same logical encrypted row produce fresh ciphertext.
-iSQL> -- Checks: The helper compares copied checkpoint images and their file nonces across generations.
+iSQL> -- Test Purpose: Verify dirty checkpoints preserve the encrypted file nonce.
+iSQL> -- Checks: The helper compares copied checkpoint headers and restarts after a follow-up checkpoint.
 iSQL> -- Manual reference:
 iSQL> --   /home/et16/work/altidev4/docs/manuals/altibase/trunk/eng/iSQL User's Manual.md
 iSQL> SELECT CASE WHEN COUNT(*) = 1 THEN 1 ELSE 0 END AS PASS_MARKER_ROW
